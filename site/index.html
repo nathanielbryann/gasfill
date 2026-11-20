@@ -1513,6 +1513,17 @@ function termsOf(cc) {   // active terminals of a country, largest capacity firs
   return TM.meta.terminals.filter(t => t.country === cc && TM.series[t.id] && daysBetween(TM.series[t.id].last, TM.end) <= 30)
     .map(t => ({...t, cap: tlast(t.id, 'dtrs', TM.end) || 0})).sort((a, b) => b.cap - a.cap);
 }
+const termCode = id => String(id).split(':').pop();
+function termGroups(cc, from, to) {   // terminals with data in [from, to]; entries sharing a terminal code are one terminal
+  const g = new Map();
+  for (const t of TM.meta.terminals.filter(t => t.country === cc && TM.series[t.id])) {
+    const s = TM.series[t.id]; if (s.last < from || s.first > to) continue;
+    const code = termCode(t.id);
+    if (!g.has(code)) g.set(code, {code, ids: [], name: t.name, last: s.last});
+    const x = g.get(code); x.ids.push(t.id); if (s.last >= x.last) { x.last = s.last; x.name = t.name; }
+  }
+  return [...g.values()];
+}
 const termCountries = () => TM ? [...new Set(TM.meta.terminals.map(t => t.country))].filter(cc => termsOf(cc).length) : [];
 function termRow(t, d) {
   const so7 = mean(x => tval(t.id, 'sendOut', x), d, 7), cap = tlast(t.id, 'dtrs', d), ly = mean(x => tval(t.id, 'sendOut', x), yearsAgo(d, 1), 7);
@@ -1584,9 +1595,9 @@ function renderTerms() {
   ].map(([l, v, s2]) => '<div class="kpi"><span class="l">' + esc(l) + '</span><span class="v">' + v + '</span><span class="s">' + esc(s2) + '</span></div>').join('');
   // terminal table
   $('#tm-t-sub').textContent = 'largest capacity first';
-  const colour = new Map(C.rows.map((r, k) => [r.t.id, 'var(--s' + (k % 8 + 1) + ')']));
+  const colour = new Map(C.rows.map((r, k) => [termCode(r.t.id), 'var(--s' + (k % 8 + 1) + ')']));
   $('#tm-table thead').innerHTML = '<tr><th>Terminal</th><th>Operator</th><th class="num">Send-out<small>GWh/d, 7-day</small></th><th class="num">Capacity<small>GWh/d</small></th><th class="num">Use<small>%</small></th><th class="num">Spare<small>GWh/d</small></th><th class="num">Tank level<small>% of max</small></th><th class="num">Last year<small>GWh/d, same week</small></th><th class="num">Idle days<small>last 30</small></th><th>Status</th></tr>';
-  $('#tm-table tbody').innerHTML = C.rows.map(r => '<tr><td class="nm"><i style="display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:8px;vertical-align:middle;background:' + colour.get(r.t.id) + '"></i>' + esc(shortName(r.t.name)) + '</td><td>' + esc(r.t.company_name || '') + '</td>' +
+  $('#tm-table tbody').innerHTML = C.rows.map(r => '<tr><td class="nm"><i style="display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:8px;vertical-align:middle;background:' + colour.get(termCode(r.t.id)) + '"></i>' + esc(shortName(r.t.name)) + '</td><td>' + esc(r.t.company_name || '') + '</td>' +
     '<td class="num">' + fmtN(r.so7, 0) + '</td><td class="num">' + fmtN(r.cap, 0) + '</td><td class="num">' + fmtN(r.use, 0) + '</td><td class="num">' + (ok(r.cap) && ok(r.so7) ? fmtN(r.cap - r.so7, 0) : '–') + '</td>' +
     '<td class="num">' + fmtN(r.tank, 0) + '</td><td class="num">' + fmtN(r.ly, 0) + '</td><td class="num">' + r.idle + '</td>' +
     '<td class="' + (r.status === 'idle' ? 'st-off' : r.status === 'near full' ? 'st-full' : '') + '">' + r.status + '</td></tr>').join('') +
@@ -1602,8 +1613,14 @@ function renderTerms() {
   $('#tm-presets').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === TMS.preset ? 'true' : 'false'));
   const to = d, from0 = TMS.preset === '3m' ? addDays(to, -91) : TMS.preset === '1y' ? addDays(to, -365) : TMS.preset === '2y' ? addDays(to, -730) : TM.start;
   const from = from0 < TM.start ? TM.start : from0, n = daysBetween(from, to) + 1, days = Array.from({length: n}, (_, i) => addDays(from, i));
-  const layers = C.rows.map(r => ({name: shortName(r.t.name), id: r.t.id, color: colour.get(r.t.id), vals: days.map(x => mean(y2 => tval(r.t.id, 'sendOut', y2), x, 7))}));
-  const capLine = days.map(x => C.rows.reduce((a, r) => a + (tlast(r.t.id, 'dtrs', x) || 0), 0) || null);
+  // every terminal with data in the period (retired ones too), current ones first in table order
+  const order = new Map(C.rows.map((r, k) => [termCode(r.t.id), k]));
+  const groups = termGroups(cc, from, to).sort((a, b) => (order.has(a.code) ? order.get(a.code) : 99) - (order.has(b.code) ? order.get(b.code) : 99) || (b.last < a.last ? -1 : 1));
+  let extra = C.rows.length;
+  for (const gr of groups) if (!colour.has(gr.code)) colour.set(gr.code, 'var(--s' + (extra++ % 8 + 1) + ')');
+  const gval = (gr, key, x) => { let v = null; for (const id of gr.ids) { const y2 = tval(id, key, x); if (ok(y2)) v = (v || 0) + y2; } return v; };
+  const layers = groups.map(gr => ({name: shortName(gr.name) + (order.has(gr.code) ? '' : ' (until ' + fmtDM(gr.last) + ' ' + gr.last.slice(0, 4) + ')'), color: colour.get(gr.code), vals: days.map(x => mean(y2 => gval(gr, 'sendOut', y2), x, 7))}));
+  const capLine = days.map(x => groups.reduce((a, gr) => a + gr.ids.reduce((b, id) => b + (TM.series[id].last >= addDays(x, -3) && TM.series[id].first <= x ? (tlast(id, 'dtrs', x) || 0) : 0), 0), 0) || null);
   $('#tm-c-sub').textContent = (CM[cc] ? CM[cc].name : cc) + ' · GWh/d, 7-day average · ' + fmtDay(from) + ' to ' + fmtDay(to);
   $('#tm-key').innerHTML = layers.map(l => '<span><i class="box" style="background:' + l.color + '"></i>' + esc(l.name) + '</span>').join('') + '<span><i class="dash" style="background:repeating-linear-gradient(90deg, var(--ink) 0 6px, transparent 6px 10px)"></i>Declared capacity</span>';
   stackPlot($('#tm-chart'), {
@@ -1622,7 +1639,8 @@ $('#png-tm').addEventListener('click', () => savePNG({
 $('#dl-tm').addEventListener('click', () => {
   const cc = TMS.code, rowsT = termsOf(cc), d = ST.date > TM.end ? TM.end : ST.date, from = TMS.preset === 'all' ? TM.start : addDays(d, TMS.preset === '3m' ? -91 : TMS.preset === '1y' ? -365 : -730);
   const out = [['date', 'country', 'terminal', 'operator', 'sendout_gwh_d', 'sendout_7d_avg_gwh_d', 'capacity_dtrs_gwh_d', 'in_tanks_gwh', 'max_inventory_gwh', 'status']];
-  for (let t = from < TM.start ? TM.start : from; t <= d; t = addDays(t, 1)) for (const r of rowsT) {
+  const rowsAll = TM.meta.terminals.filter(t => t.country === cc && TM.series[t.id] && TM.series[t.id].last >= from && TM.series[t.id].first <= d);
+  for (let t = from < TM.start ? TM.start : from; t <= d; t = addDays(t, 1)) for (const r of rowsAll) {
     const s = TM.series[r.id], i = daysBetween(TM.start, t);
     out.push([t, cc, r.name, r.company_name, tval(r.id, 'sendOut', t), mean(x => tval(r.id, 'sendOut', x), t, 7), tval(r.id, 'dtrs', t), tval(r.id, 'inv', t), tval(r.id, 'dtmi', t), s.status[i] || '']);
   }
