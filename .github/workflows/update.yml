@@ -1,4 +1,4 @@
-# Fetches the latest AGSI+ storage, ALSI LNG and TTF data, commits them, and republishes the site.
+# Fetches the latest AGSI+ storage, ALSI LNG, TTF and Eurostat demand data, commits them, and republishes the site.
 #
 # Started by cron-job.org (a POST to this workflow's "dispatches" API, see README), by the
 # "Run workflow" button in the Actions tab, or by pushing a change to .github/update-now.txt
@@ -68,6 +68,13 @@ jobs:
         if: steps.what.outputs.fetch == 'true'
         continue-on-error: true
         run: python scripts/fetch_ttf.py
+
+      - name: Fetch Eurostat gas demand
+        if: steps.what.outputs.fetch == 'true'
+        continue-on-error: true
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: python scripts/fetch_demand.py
 
       - name: Commit updated data
         if: steps.what.outputs.fetch == 'true'

@@ -101,6 +101,25 @@ def test_terminal_countries():
     print("terminal countries ok")
 
 
+def test_jsonstat():
+    import fetch_demand as fd
+    # Eurostat JSON-stat 2.0: freq, nrg_bal, siec, unit, geo, time; values keyed by flat index
+    js = {"id": ["freq", "nrg_bal", "siec", "unit", "geo", "time"], "size": [1, 1, 1, 1, 2, 3],
+          "dimension": {"geo": {"category": {"index": {"DE": 0, "EU27_2020": 1}}},
+                        "time": {"category": {"index": {"2026-06": 0, "2026-07": 1, "2026-08": 2}}},
+                        "freq": {"category": {"index": {"M": 0}}}, "nrg_bal": {"category": {"index": {"IC_CAL_MG": 0}}},
+                        "siec": {"category": {"index": {"G3000": 0}}}, "unit": {"category": {"index": {"TJ_GCV": 0}}}},
+          "value": {"0": 180000, "1": 172800, "3": 1080000, "5": 1116000}, "status": {"5": "p"}}
+    got = fd.parse_jsonstat(js)
+    assert got["DE"] == {"2026-06": (180000.0, ""), "2026-07": (172800.0, "")}, got["DE"]
+    assert got["EU27_2020"]["2026-08"] == (1116000.0, "p") and "2026-07" not in got["EU27_2020"]
+    js["value"] = [180000, 172800, None, 1080000, None, 1116000]   # list form
+    assert fd.parse_jsonstat(js)["EU27_2020"]["2026-06"][0] == 1080000.0
+    assert fd.month_code("2014M03") == "2014-03" and fd.month_code("2014-3") == "2014-03"
+    print("jsonstat ok")
+
+
 if __name__ == "__main__":
     test_listing()
     test_terminal_countries()
+    test_jsonstat()

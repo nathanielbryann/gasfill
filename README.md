@@ -14,6 +14,9 @@ Same look as Spotrank, but no game.
   key for both platforms). Terminals come from ALSI's own listing (`about?show=listing`), so a new
   terminal appears without code changes.
 - `site/data/ttf.json` holds TTF, written by `scripts/fetch_ttf.py`.
+- `site/data/demand.json` holds monthly gas demand from Eurostat (`nrg_cb_gasm`, inland consumption,
+  TWh), written by `scripts/fetch_demand.py`. No key needed. Eurostat publishes each month about two
+  to three months later; the country code used is `eurostat` in `config.json` (EU -> `EU27_2020`, `null` = none).
 - `site/data/countries-map.json` holds the map shapes for every European country (`scripts/build_map.py`, run once).
 - `config.json` lists the countries and dates.
 - `.github/workflows/update.yml` fetches new data, commits it and republishes the site.
