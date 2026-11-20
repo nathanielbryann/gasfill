@@ -261,6 +261,7 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
       <h3 class="ph-h3">All countries <span id="ws-t-sub"></span></h3>
       <div class="tbl-scroll"><table id="ws-table"><thead></thead><tbody></tbody></table></div>
       <h3 class="ph-h3">Tracking against past winters <span id="ws-c-sub"></span></h3>
+      <div class="ctrl"><span class="lbl">Past winters</span><div class="chips" id="ws-years"></div></div>
       <div class="key" id="ws-key"></div>
       <div class="chart-wrap" id="ws-chart"></div>
       <h3 class="ph-h3">Milestones ahead <span id="ws-m-sub"></span></h3>
@@ -1151,7 +1152,7 @@ $('#dl-ol').addEventListener('click', () => {
 });
 
 /* ---------- winter so far ---------- */
-const WS = {from: lsGet('ws-from', 'nov')};
+const WS = {from: lsGet('ws-from', 'nov'), sel: lsGet('ws-sel', []), auto: lsGet('ws-auto', true)};
 const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
 const winterOf = d => { const m = +d.slice(5, 7), y = +d.slice(0, 4); return m >= 10 ? y : m <= 3 ? y - 1 : null; };
 const RULES = {DE: [{date: '2027-02-01', min: 30, label: '30% rule'}]};   // national rules for winter 2026/27 only
@@ -1232,7 +1233,29 @@ function renderWinter() {
   $('#ws-table tbody').querySelectorAll('tr').forEach(tr => tr.addEventListener('click', () => selectCountry(tr.dataset.c, false)));
   // tracking chart: the outlook from the start, with the actual path on top
   if (r && r.R) {
-    const R = r.R, N = R.n + 1, today = daysBetween(R.d, r.d), top = r.close.slice(0, 3).map(x => x.q), topSet = new Set(top), tc = pickColours(top.map(q => q.y0));
+    const R = r.R, N = R.n + 1, today = daysBetween(R.d, r.d), closest = r.close.slice(0, 3).map(x => x.q.y0);
+    const shownY = new Set([...(WS.auto ? closest : []), ...WS.sel]);
+    const top = R.paths.filter(q => shownY.has(q.y0)).sort((a, b) => a.y0 - b.y0), topSet = new Set(top), tc = pickColours(top.map(q => q.y0));
+    const gapOf = new Map(r.close.map((x, k) => [x.q.y0, {gap: x.gap, rank: k + 1}]));
+    // year picker: every past winter, with how close it has tracked so far and where it ends
+    $('#ws-years').innerHTML = R.paths.slice().sort((a, b) => a.y0 - b.y0).map(q => {
+      const g = gapOf.get(q.y0), on = shownY.has(q.y0);
+      return '<button type="button" class="zp" data-y="' + q.y0 + '" aria-pressed="' + on + '" title="Average gap so far ' + (g ? fmtN(g.gap, 1) + ' pp, ' + ord(g.rank) + ' closest' : '–') + '; ends ' + endTxt(q) + '"><i style="background:' + (tc.get(q.y0) || yearColour(q.y0)) + '"></i>' + q.label + ' <span class="ev">' + endTxt(q) + '</span></button>';
+    }).join('') + '<button type="button" class="zp opt" data-y="auto" aria-pressed="' + WS.auto + '">Closest 3</button><button type="button" class="zp opt" data-y="all" aria-pressed="false">All</button><button type="button" class="zp opt" data-y="none" aria-pressed="false">None</button>';
+    $('#ws-years').querySelectorAll('.zp').forEach(b => b.addEventListener('click', () => {
+      const v = b.dataset.y;
+      if (v === 'auto') WS.auto = !WS.auto;
+      else if (v === 'all') WS.sel = R.paths.map(q => q.y0);
+      else if (v === 'none') { WS.sel = []; WS.auto = false; }
+      else {
+        const y = +v;
+        if (shownY.has(y)) {   // clicking a shown winter hides it, even one shown as one of the closest 3
+          if (WS.auto && closest.includes(y)) { WS.auto = false; WS.sel = [...shownY].filter(x => x !== y); }
+          else WS.sel = WS.sel.filter(x => x !== y);
+        } else WS.sel = WS.sel.concat(y);
+      }
+      lsSet('ws-sel', WS.sel); lsSet('ws-auto', WS.auto); renderWinter();
+    }));
     const dates = Array.from({length: N}, (_, i) => addDays(R.d, i));
     const actual = dates.map(t => t <= r.d ? val(r.code, 'full', t) : null);
     const series = R.paths.filter(q => !topSet.has(q)).map(q => ({name: q.label, vals: q.p, color: 'var(--line-strong)', width: 1, noDot: true}));
@@ -1243,7 +1266,7 @@ function renderWinter() {
     for (const m of (Y === 2026 && RULES[r.code]) || []) { const i = dates.indexOf(m.date); if (i >= 0) refs.push({v: m.min, label: m.label + ' (1 Feb)'}); }
     $('#ws-c-sub').textContent = cname(r.code) + ' · outlook started ' + fmtDay(addDays(R.d, 1)) + ' from ' + fmtN(R.f0, 1) + '%, actual to ' + fmtDM(r.d);
     $('#ws-key').innerHTML = '<span><i style="background:var(--ink);height:4px"></i>Actual</span><span><i class="dash"></i>Median of past winters</span><span><i class="box" style="background:var(--band)"></i>Range</span>' +
-      top.map((q, k) => '<span><i style="background:' + tc.get(q.y0) + '"></i>' + (k === 0 ? 'Closest so far: ' : '') + 'like ' + q.label + '</span>').join('') + '<span><i style="background:var(--line-strong)"></i>Other past winters</span>' + (refs.length ? '<span><i class="tgt"></i>National rule</span>' : '');
+      top.map(q => '<span><i style="background:' + tc.get(q.y0) + '"></i>' + 'Like ' + q.label + (gapOf.get(q.y0) && gapOf.get(q.y0).rank <= 3 ? ' (' + ord(gapOf.get(q.y0).rank) + ' closest)' : '') + '</span>').join('') + '<span><i style="background:var(--line-strong)"></i>Other past winters</span>' + (refs.length ? '<span><i class="tgt"></i>National rule</span>' : '');
     plot($('#ws-chart'), {
       n: N, series, band: {lo: R.lo, hi: R.hi}, unit: '%', clamp: [0, 100], padR: R.paths.some(q => q.empty) ? 132 : 96, refs, shades,
       vlines: [{i: today, label: 'today'}], H: ($('#ws-chart').clientWidth || 600) < 520 ? 250 : 320,
@@ -1253,11 +1276,11 @@ function renderWinter() {
         let h = '<b>' + fmtDay(dates[i]) + '</b>';
         if (ok(actual[i])) h += '<br>' + swatch('var(--ink)') + 'Actual <b>' + fmtN(actual[i], 1) + '%</b>';
         h += '<br>' + swatch('var(--ink-2)') + 'Median ' + fmtN(R.med[i], 1) + '% <span class="mut">range ' + fmtN(R.lo[i], 0) + '–' + fmtN(R.hi[i], 0) + '</span>';
-        for (const q of top) h += '<br>' + swatch(tc.get(q.y0)) + 'Like ' + q.label + ' ' + fmtN(q.p[i], 1) + '%';
+        for (const q of top.slice().sort((a, b) => b.p[i] - a.p[i])) h += '<br>' + swatch(tc.get(q.y0)) + 'Like ' + q.label + ' <b>' + fmtN(q.p[i], 1) + '%</b>';
         return h;
       },
     });
-  } else { $('#ws-chart').innerHTML = ''; $('#ws-key').innerHTML = ''; $('#ws-c-sub').textContent = ''; }
+  } else { $('#ws-chart').innerHTML = ''; $('#ws-key').innerHTML = ''; $('#ws-c-sub').textContent = ''; $('#ws-years').innerHTML = ''; }
   // milestones ahead, from the chosen day
   const Rn = r && outlook(r.code, r.d, OL.n);
   if (Rn && Rn.H.kind === 'winter') {
