@@ -407,7 +407,8 @@ const fmtDay = s => +s.slice(8, 10) + ' ' + MON[+s.slice(5, 7) - 1] + ' ' + s.sl
 const fmtDM = s => +s.slice(8, 10) + ' ' + MON[+s.slice(5, 7) - 1];
 const ok = v => v !== null && v !== undefined && isFinite(v);
 const fmtN = (v, d = 1) => ok(v) ? (v < 0 ? '−' : '') + Math.abs(v).toLocaleString('en-GB', {minimumFractionDigits: d, maximumFractionDigits: d}) : '–';
-const fmtS = (v, d = 1) => ok(v) ? (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v).toLocaleString('en-GB', {minimumFractionDigits: d, maximumFractionDigits: d}) : '–';
+const fmtS = (v, d = 1) => { if (!ok(v)) return '–'; const r = Math.round(v * 10 ** d) / 10 ** d;   // sign of the rounded value, so no "−0"
+  return (r > 0 ? '+' : r < 0 ? '−' : '±') + Math.abs(r).toLocaleString('en-GB', {minimumFractionDigits: d, maximumFractionDigits: d}); };
 const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 function niceStep(range, target) {
   const raw = range / Math.max(1, target), p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
