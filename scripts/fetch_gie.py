@@ -1,7 +1,8 @@
 """Fetch daily data from GIE's transparency platforms into the site's data files.
 
 - AGSI+ (underground gas storage) -> site/data/storage.json
-- ALSI (LNG terminals)            -> site/data/lng.json
+- ALSI (LNG terminals), by country -> site/data/lng.json
+- ALSI, terminal by terminal       -> site/data/lng_terminals.json (countries and start in config.json "terminals")
 
 Countries and dates come from config.json: each country lists its AGSI+ and ALSI query
 (`"agsi": {"country": "DE"}`, `"alsi": {"type": "eu"}`, ...). A country that isn't in the file yet
@@ -10,7 +11,7 @@ operators correct recent days (each day is marked E = estimated or C = confirmed
 
     AGSI_API_KEY=... python scripts/fetch_gie.py                  # daily update, both datasets
     AGSI_API_KEY=... python scripts/fetch_gie.py --full           # everything again from fetch_from
-    AGSI_API_KEY=... python scripts/fetch_gie.py --dataset alsi   # only one dataset
+    AGSI_API_KEY=... python scripts/fetch_gie.py --dataset alsi   # only one dataset (agsi, alsi, terminals)
     AGSI_API_KEY=... python scripts/fetch_gie.py --only DE NL     # only some countries
 
 API (both platforms): key in an `x-key` header, `type=eu` for the EU total, `country=XX` for a
@@ -83,7 +84,7 @@ def num(v):
     return f if f == f else None   # drop NaN
 
 
-def api_get(api, params, key):
+def api_get(api, params, key, need_data=True):
     url = api + "?" + urllib.parse.urlencode(params)
     for attempt in range(5):
         wait = MIN_GAP_S - (time.time() - _last_call[0])
@@ -112,7 +113,7 @@ def api_get(api, params, key):
             js = json.loads(body)
         except ValueError:
             raise RuntimeError(f"not JSON for {url}: {body[:300]!r}") from None
-        if not isinstance(js, dict) or "data" not in js:
+        if need_data and (not isinstance(js, dict) or "data" not in js):
             raise RuntimeError(f"no 'data' for {url}: {body[:300]!r}")
         return js
     raise RuntimeError(f"kept refusing {url}")
@@ -279,10 +280,128 @@ def run(name, cfg, key, full, only):
     return problems, wanted
 
 
+# ---------- terminal by terminal (ALSI) ----------
+TERMINALS_OUT = os.path.join(ROOT, "site", "data", "lng_terminals.json")
+LISTING_URL = "https://alsi.gie.eu/api/about"
+
+
+def walk_listing(js):
+    """ALSI 'about?show=listing' -> [{id, company, name, company_name, country}] for every terminal.
+
+    The listing nests operators (with an EIC code and a list of facilities) under region and country
+    keys. It is read defensively: any dict with an 'eic' and a 'facilities' list is an operator, any
+    dict with an 'eic' inside such a list is a terminal, and the country comes from the terminal, the
+    operator, or the nearest two-letter key above them.
+    """
+    out, seen = [], set()
+
+    def code_of(x):
+        c = x.get("country") if isinstance(x, dict) else None
+        if isinstance(c, dict):
+            c = c.get("code")
+        return str(c).upper()[:2] if c else None
+
+    def go(node, cc):
+        if isinstance(node, dict):
+            facs = node.get("facilities")
+            if node.get("eic") and isinstance(facs, list):
+                ccomp = code_of(node) or cc
+                for f in facs:
+                    if isinstance(f, dict) and f.get("eic") and f["eic"] not in seen:
+                        seen.add(f["eic"])
+                        out.append({"id": f["eic"], "company": node["eic"], "name": str(f.get("name") or f["eic"]).strip(),
+                                    "company_name": str(node.get("short_name") or node.get("name") or "").strip(),
+                                    "country": code_of(f) or ccomp})
+                return
+            for k, v in node.items():
+                go(v, k.upper() if isinstance(k, str) and len(k) == 2 and k.isalpha() else cc)
+        elif isinstance(node, list):
+            for v in node:
+                go(v, cc)
+
+    go(js, None)
+    return out
+
+
+def run_terminals(cfg, key, full):
+    tc = cfg.get("terminals") or {}
+    countries, start0 = set(tc.get("countries") or []), tc.get("from", cfg["fetch_from"])
+    ds = DATASETS["alsi"]
+    print("--- ALSI TERMINALS ---", flush=True)
+    try:
+        listing = api_get(LISTING_URL, {"show": "listing"}, key, need_data=False)
+    except RuntimeError as e:
+        print(f"::warning::ALSI listing unavailable ({e}); terminals not updated.")
+        return
+    terms = [t for t in walk_listing(listing) if t["country"] in countries]
+    if not terms:
+        shape = json.dumps(listing)[:800]
+        print(f"::warning::No terminals for {sorted(countries)} found in the ALSI listing. Start of the listing: {shape}")
+        return
+    print("terminals: " + "; ".join(f"{t['country']} {t['name']} ({t['company_name']})" for t in terms), flush=True)
+
+    # existing file -> {id: {date: record}}
+    have_all = {}
+    if os.path.exists(TERMINALS_OUT):
+        with open(TERMINALS_OUT, encoding="utf-8") as f:
+            old = json.load(f)
+        st = dt.date.fromisoformat(old["start"])
+        for tid, s in old.get("series", {}).items():
+            recs, status = {}, s.get("status", "")
+            for i in range(max((len(s[k]) for k in ds["fields"] if k in s), default=0)):
+                rec = {k: (s[k][i] if k in s and i < len(s[k]) else None) for k in ds["fields"]}
+                rec["status"] = status[i] if i < len(status) else "-"
+                if any(rec[k] is not None for k in ds["fields"]):
+                    recs[(st + dt.timedelta(days=i)).isoformat()] = rec
+            have_all[tid] = recs
+    today, sampled = dt.date.today().isoformat(), False
+    for t in terms:
+        have = have_all.get(t["id"], {})
+        rep_days = [d for d, r in have.items() if r.get("sendOut") is not None or r.get("inv") is not None]
+        start = start0 if full or not rep_days else max(start0, (dt.date.fromisoformat(max(rep_days)) - dt.timedelta(days=int(cfg["refresh_days"]))).isoformat())
+        try:
+            rows = fetch_range(ds, {"country": t["country"], "company": t["company"], "facility": t["id"]}, start, today, key, show_sample=not sampled)
+            sampled = True
+        except RuntimeError as e:
+            print(f"::warning::terminal {t['name']}: {e}")
+            continue
+        got = [d for d, r in rows.items() if r.get("sendOut") is not None or r.get("inv") is not None]
+        have.update(rows)
+        have_all[t["id"]] = have
+        last = max(got) if got else None
+        print(f"{t['country']} {t['name']}: {len(got)} days with values" + (f", last {last} send-out {rows[last]['sendOut']} GWh/d, capacity {rows[last]['dtrs']}" if last else ""), flush=True)
+
+    days_all = [d for recs in have_all.values() for d, r in recs.items() if r.get("sendOut") is not None or r.get("inv") is not None]
+    if not days_all:
+        print("::warning::No terminal data at all; file not written.")
+        return
+    end = max(days_all)
+    days = list(daterange(start0, end))
+    series, meta = {}, []
+    for t in terms:
+        recs = have_all.get(t["id"], {})
+        rep_days = [d for d, r in recs.items() if r.get("sendOut") is not None or r.get("inv") is not None]
+        if not rep_days:
+            continue
+        s = {k: [recs.get(d, {}).get(k) for d in days] for k in ds["fields"]}
+        s["status"] = "".join(recs.get(d, {}).get("status", "-") for d in days)
+        s["first"], s["last"] = min(rep_days), max(rep_days)
+        series[t["id"]] = s
+        meta.append({k: t[k] for k in ("id", "name", "company_name", "country")})
+    js = {"meta": {"dataset": "alsi-terminals", "source": ds["source"], "generated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                   "units": {k: u for k, (_, _, _, u) in ds["fields"].items()}, "terminals": meta},
+          "start": start0, "end": end, "series": series}
+    tmp = TERMINALS_OUT + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(js, f, separators=(",", ":"))
+    os.replace(tmp, TERMINALS_OUT)
+    print(f"wrote {TERMINALS_OUT}: {os.path.getsize(TERMINALS_OUT) / 1024:.0f} KB, {len(series)} terminals, {start0} to {end}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--full", action="store_true", help="fetch every country again from fetch_from")
-    ap.add_argument("--dataset", choices=["agsi", "alsi", "all"], default="all")
+    ap.add_argument("--dataset", choices=["agsi", "alsi", "terminals", "all"], default="all")
     ap.add_argument("--only", nargs="*", help="country codes to fetch (default: all in config.json)")
     args = ap.parse_args()
 
@@ -292,9 +411,12 @@ def main():
     if not key:
         print("::warning::AGSI_API_KEY is not set; nothing fetched.")
         return 0
-    names = ["agsi", "alsi"] if args.dataset == "all" else [args.dataset]
+    names = ["agsi", "alsi", "terminals"] if args.dataset == "all" else [args.dataset]
     failed_all = False
     for name in names:
+        if name == "terminals":
+            run_terminals(cfg, key, args.full)
+            continue
         problems, wanted = run(name, cfg, key, args.full, args.only)
         if name == "agsi" and wanted and len(problems) == len(wanted):
             failed_all = True

@@ -75,3 +75,19 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def test_listing():
+    # two plausible shapes of ALSI's listing: nested by region and country, and a flat list
+    nested = {"LSO": {"Europe": {"DE": [{"name": "Deutsche Energy Terminal GmbH", "short_name": "DET", "eic": "37X-DET", "country": {"code": "DE"},
+                                         "facilities": [{"name": "Wilhelmshaven 1", "eic": "W1"}, {"name": "Brunsbuettel", "eic": "BR"}]}],
+                                  "NL": [{"name": "Gate terminal", "eic": "21X-GATE", "facilities": [{"name": "Rotterdam Gate", "eic": "GATE", "country": {"code": "NL"}}]}]}}}
+    t = fg.walk_listing(nested)
+    assert [(x["id"], x["country"], x["company"]) for x in t] == [("W1", "DE", "37X-DET"), ("BR", "DE", "37X-DET"), ("GATE", "NL", "21X-GATE")], t
+    flat = [{"eic": "C1", "name": "Op", "country": "FR", "facilities": [{"eic": "F1", "name": "Dunkerque"}]}]
+    assert fg.walk_listing(flat) == [{"id": "F1", "company": "C1", "name": "Dunkerque", "company_name": "Op", "country": "FR"}]
+    print("listing tests passed")
+
+
+if __name__ == "__main__":
+    test_listing()
