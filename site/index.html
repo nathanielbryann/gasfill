@@ -609,7 +609,8 @@ function renderKpis() {
   ];
   if (hasLNG(code)) {
     const lv = lngAvg7(code, ST.date), lb = lngBase(code, ST.date);
-    tiles.push([cname(code) + ' LNG send-out', fmtN(lv, 0) + '<small>GWh/d</small>', lb && ok(lv) ? '7-day avg · ' + fmtS((lv / lb.avg - 1) * 100, 0) + '% vs 5-yr avg' : '7-day average']);
+    const ly = lngAvg7(code, yearsAgo(ST.date, 1)), vs = (a, b) => fmtS((a / b - 1) * 100, 0) + '%';
+    tiles.push([cname(code) + ' LNG send-out', fmtN(lv, 0) + '<small>GWh/d</small>', '7-day avg' + (lb && ok(lv) ? ' · ' + vs(lv, lb.avg) + ' vs 5-yr avg (' + fmtN(lb.avg, 0) + ')' : '') + (ok(ly) && ok(lv) ? ' · ' + vs(lv, ly) + ' vs last year (' + fmtN(ly, 0) + ')' : '')]);
   }
   $('#kpis').innerHTML = tiles.map(([l, v, s]) => '<div class="kpi"><span class="l">' + esc(l) + '</span><span class="v">' + v + '</span><span class="s">' + esc(s) + '</span></div>').join('');
 }
@@ -955,15 +956,16 @@ function renderHist() {
   const lngOn = hasLNG(code);
   $('#h-lng-sub').textContent = lngOn ? 'GWh/d, 7-day average' : '';
   if (lngOn) {
-    const l7 = days.map(d => lngAvg7(code, d)), lb = days.map(d => lngBase(code, d));
-    $('#h-lng-key').innerHTML = '<span><i style="background:var(--s3)"></i>' + esc(cname(code)) + ' send-out</span><span><i class="dash"></i>5-year average, same week</span><span><i class="box" style="background:var(--band)"></i>5-year range</span>';
+    const l7 = days.map(d => lngAvg7(code, d)), lb = days.map(d => lngBase(code, d)), lly = days.map(d => lngAvg7(code, yearsAgo(d, 1)));
+    $('#h-lng-key').innerHTML = '<span><i style="background:var(--s3)"></i>' + esc(cname(code)) + ' send-out</span><span><i style="background:var(--s7)"></i>Same week last year</span><span><i class="dash"></i>5-year average, same week</span><span><i class="box" style="background:var(--band)"></i>5-year range</span>';
     charts.push(plot($('#h-lng'), {
       n, xTicks: ticks, unit: 'GWh/d', H: small ? 150 : 180, zero: true, band: {lo: lb.map(b => b ? b.min : null), hi: lb.map(b => b ? b.max : null)},
-      series: [{name: '5-yr avg', vals: lb.map(b => b ? b.avg : null), color: 'var(--ink-2)', width: 1.5, dash: '5 4', noDot: true}, {name: 'LNG send-out', vals: l7, color: 'var(--s3)', width: 2}],
+      series: [{name: '5-yr avg', vals: lb.map(b => b ? b.avg : null), color: 'var(--ink-2)', width: 1.5, dash: '5 4', noDot: true}, {name: 'Last year', vals: lly, color: 'var(--s7)', width: 1.5}, {name: 'LNG send-out', vals: l7, color: 'var(--s3)', width: 2}],
       aria: 'LNG send-out', onMove: move, onLeave: leave,
       tip: i => { const d = days[i], inv = lval(code, 'inv', d), mx = lval(code, 'dtmi', d), sd = lval(code, 'sendOut', d);
         return head(i) + '<br>' + swatch('var(--s3)') + 'Send-out <b>' + fmtN(l7[i], 0) + '</b> GWh/d <span class="mut">7-day avg (day ' + fmtN(sd, 0) + ')</span>' +
           (ok(inv) ? '<br><span class="mut">In tanks ' + fmtN(inv / 1000, 2) + ' TWh' + (ok(mx) && mx > 0 ? ' · ' + fmtN(inv / mx * 100, 0) + '% of max' : '') + '</span>' : '') +
+          (ok(lly[i]) ? '<br>' + swatch('var(--s7)') + 'Last year <b>' + fmtN(lly[i], 0) + '</b> GWh/d' + (ok(l7[i]) ? ' <span class="mut">(' + fmtS((l7[i] / lly[i] - 1) * 100, 0) + '% now)</span>' : '') : '') +
           (lb[i] ? '<br><span class="mut">5-yr avg ' + fmtN(lb[i].avg, 0) + ' GWh/d</span>' : ''); },
     }));
   } else {
@@ -991,10 +993,10 @@ function initHist() {
   $('#h-from').addEventListener('change', onDates); $('#h-to').addEventListener('change', onDates);
 }
 $('#dl-hist').addEventListener('click', () => {
-  const code = ST.code, n = daysBetween(ST.from, ST.to) + 1, rows = [['gas_day', 'code', 'fill_pct', 'gas_in_storage_twh', 'working_gas_volume_twh', 'injection_gwh_d', 'withdrawal_gwh_d', 'net_flow_gwh_d', 'avg_5y_pct', 'min_5y_pct', 'max_5y_pct', 'pct_of_annual_consumption', 'ttf_eur_mwh', 'status', 'lng_sendout_gwh_d', 'lng_in_tanks_gwh', 'lng_max_inventory_gwh']];
+  const code = ST.code, n = daysBetween(ST.from, ST.to) + 1, rows = [['gas_day', 'code', 'fill_pct', 'gas_in_storage_twh', 'working_gas_volume_twh', 'injection_gwh_d', 'withdrawal_gwh_d', 'net_flow_gwh_d', 'avg_5y_pct', 'min_5y_pct', 'max_5y_pct', 'pct_of_annual_consumption', 'ttf_eur_mwh', 'status', 'lng_sendout_gwh_d', 'lng_sendout_same_day_last_year_gwh_d', 'lng_in_tanks_gwh', 'lng_max_inventory_gwh']];
   for (let i = 0; i < n; i++) {
     const d = addDays(ST.from, i), b = base5(code, 'full', d);
-    rows.push([d, code, val(code, 'full', d), val(code, 'gas', d), val(code, 'wgv', d), val(code, 'inj', d), val(code, 'wdr', d), net(code, d), b ? b.avg : null, b ? b.min : null, b ? b.max : null, val(code, 'consFull', d), ttf(d), stat(code, d), lval(code, 'sendOut', d), lval(code, 'inv', d), lval(code, 'dtmi', d)]);
+    rows.push([d, code, val(code, 'full', d), val(code, 'gas', d), val(code, 'wgv', d), val(code, 'inj', d), val(code, 'wdr', d), net(code, d), b ? b.avg : null, b ? b.min : null, b ? b.max : null, val(code, 'consFull', d), ttf(d), stat(code, d), lval(code, 'sendOut', d), lval(code, 'sendOut', yearsAgo(d, 1)), lval(code, 'inv', d), lval(code, 'dtmi', d)]);
   }
   saveCSV('history-' + code + '-' + ST.from + '-' + ST.to + '.csv', rows);
 });
@@ -1191,9 +1193,9 @@ function wsRow(code, d0) {
   const nf = mean(t => net(code, t), d, n), nfs = [];
   for (let k = 1; k <= 5; k++) { const v = mean(t => net(code, t), yearsAgo(d, k), n); if (ok(v)) nfs.push(v); }
   const nfp = nfs.length >= 3 ? nfs.reduce((a, b) => a + b, 0) / nfs.length : null;
-  let lng = null, lngp = null;
+  let lng = null, lngp = null, lngly = null;
   if (hasLNG(code)) {
-    lng = mean(t => lval(code, 'sendOut', t), d, n); const ls = [];
+    lng = mean(t => lval(code, 'sendOut', t), d, n); lngly = mean(t => lval(code, 'sendOut', t), yearsAgo(d, 1), n); const ls = [];
     for (let k = 1; k <= 5; k++) { const v = mean(t => lval(code, 'sendOut', t), yearsAgo(d, k), n); if (ok(v)) ls.push(v); }
     lngp = ls.length >= 3 ? ls.reduce((a, b) => a + b, 0) / ls.length : null;
   }
@@ -1206,7 +1208,7 @@ function wsRow(code, d0) {
     const a = act(m); if (ok(a)) gapMed = a - R.med[m];
   }
   return {code, s0, d, n, f0: val(code, 'full', s0), f1: val(code, 'full', d), ch, twh: g1 - g0, rank: 1 + past.filter(p => p.v < ch).length, of: past.length + 1, past,
-    nf, nfp, lng, lngp, R, close, gapMed};
+    nf, nfp, lng, lngp, lngly, R, close, gapMed};
 }
 const paceTxt = r => !ok(r.nf) || !ok(r.nfp) ? '–' : (r.nf < 0 && r.nfp < -50 ? fmtN(r.nf / r.nfp * 100, 0) + '%' : fmtS(r.nf - r.nfp, 0));
 function renderWinter() {
@@ -1234,16 +1236,16 @@ function renderWinter() {
       ['Pace vs normal', paceTxt(r) + (r.nf < 0 && r.nfp < -50 ? '<small>of normal</small>' : '<small>GWh/d</small>'), 'net flow ' + fmtS(r.nf, 0) + ' GWh/d vs ' + fmtS(r.nfp, 0) + ' (5-yr avg)'],
       ['Tracking like', r.close.length ? r.close[0].q.label : '–', r.close.length > 2 ? 'then ' + r.close[1].q.label + ', ' + r.close[2].q.label + (ok(r.gapMed) ? ' · ' + fmtS(r.gapMed, 1) + ' pp vs the median path' : '') : ''],
     ];
-    if (ok(r.lng) && ok(r.lngp)) tiles.push(['LNG send-out', fmtS((r.lng / r.lngp - 1) * 100, 0) + '<small>% vs normal</small>', fmtN(r.lng, 0) + ' GWh/d vs ' + fmtN(r.lngp, 0) + ' (5-yr avg, same days)']);
+    if (ok(r.lng) && ok(r.lngp)) tiles.push(['LNG send-out', fmtS((r.lng / r.lngp - 1) * 100, 0) + '<small>% vs normal</small>', fmtN(r.lng, 0) + ' GWh/d vs ' + fmtN(r.lngp, 0) + ' (5-yr avg, same days)' + (ok(r.lngly) ? '; ' + fmtS((r.lng / r.lngly - 1) * 100, 0) + '% vs last year (' + fmtN(r.lngly, 0) + ')' : '')]);
     $('#ws-kpis').innerHTML = tiles.map(([l, v, s2]) => '<div class="kpi"><span class="l">' + esc(l) + '</span><span class="v">' + v + '</span><span class="s">' + esc(s2) + '</span></div>').join('');
   }
   // all countries
   $('#ws-t-sub').textContent = WS.from === 'own' ? 'each from the day its withdrawal season began' : 'since ' + (WS.from === 'oct' ? '1 October' : '1 November');
-  $('#ws-table thead').innerHTML = '<tr><th>Country</th><th class="num">From</th><th class="num">Then<small>%</small></th><th class="num">Now<small>%</small></th><th class="num">Change<small>pp</small></th><th class="num">Change<small>TWh</small></th><th class="num">Rank<small>largest drop</small></th><th class="num">Net flow<small>GWh/d, avg</small></th><th class="num">vs normal</th><th class="num">LNG<small>vs normal</small></th><th>Tracking like</th></tr>';
+  $('#ws-table thead').innerHTML = '<tr><th>Country</th><th class="num">From</th><th class="num">Then<small>%</small></th><th class="num">Now<small>%</small></th><th class="num">Change<small>pp</small></th><th class="num">Change<small>TWh</small></th><th class="num">Rank<small>largest drop</small></th><th class="num">Net flow<small>GWh/d, avg</small></th><th class="num">vs normal</th><th class="num">LNG<small>vs normal</small></th><th class="num">LNG<small>vs last year</small></th><th>Tracking like</th></tr>';
   $('#ws-table tbody').innerHTML = rows.map(({c, r: q}) => '<tr data-c="' + c.code + '" class="' + (c.aggregate ? 'agg ' : '') + (c.code === ST.code ? 'sel' : '') + '"><td>' + (c.aggregate ? 'EU total' : esc(c.code) + ' · ' + esc(c.name)) + '</td>' +
     '<td class="num">' + fmtDM(addDays(q.s0, 1)) + '</td><td class="num">' + fmtN(q.f0, 1) + '</td><td class="num">' + fmtN(q.f1, 1) + '</td><td class="num">' + fmtS(q.ch, 1) + '</td><td class="num">' + fmtS(q.twh, 1) + '</td>' +
     '<td class="num">' + (q.ch < 0 ? ord(q.rank) + ' of ' + q.of : '–') + '</td><td class="num">' + fmtS(q.nf, 0) + '</td><td class="num">' + paceTxt(q) + '</td>' +
-    '<td class="num">' + (ok(q.lng) && ok(q.lngp) ? fmtS((q.lng / q.lngp - 1) * 100, 0) + '%' : '–') + '</td><td>' + (q.close.length ? q.close.slice(0, 2).map(x => x.q.label).join(', ') : '–') + '</td></tr>').join('');
+    '<td class="num">' + (ok(q.lng) && ok(q.lngp) ? fmtS((q.lng / q.lngp - 1) * 100, 0) + '%' : '–') + '</td><td class="num">' + (ok(q.lng) && ok(q.lngly) ? fmtS((q.lng / q.lngly - 1) * 100, 0) + '%' : '–') + '</td><td>' + (q.close.length ? q.close.slice(0, 2).map(x => x.q.label).join(', ') : '–') + '</td></tr>').join('');
   $('#ws-table tbody').querySelectorAll('tr').forEach(tr => tr.addEventListener('click', () => selectCountry(tr.dataset.c, false)));
   // tracking chart: the outlook from the start, with the actual path on top
   if (r && r.R) {
@@ -1326,8 +1328,8 @@ $('#png-ws').addEventListener('click', () => savePNG({
 }));
 $('#dl-ws').addEventListener('click', () => {
   const rows = CO.map(c => wsRow(c.code, ST.date)).filter(Boolean);
-  saveCSV('winter-so-far-' + WS.from + '-' + ST.date + '.csv', [['code', 'from', 'to', 'fill_then_pct', 'fill_now_pct', 'change_pp', 'change_twh', 'rank_largest_drop', 'winters_compared', 'net_flow_gwh_d', 'net_flow_5y_avg_gwh_d', 'lng_sendout_gwh_d', 'lng_sendout_5y_avg_gwh_d', 'closest_past_winters']]
-    .concat(rows.map(q => [q.code, addDays(q.s0, 1), q.d, q.f0, q.f1, q.ch, q.twh, q.rank, q.of, q.nf, q.nfp, q.lng, q.lngp, q.close.slice(0, 3).map(x => x.q.label).join(' ')])));
+  saveCSV('winter-so-far-' + WS.from + '-' + ST.date + '.csv', [['code', 'from', 'to', 'fill_then_pct', 'fill_now_pct', 'change_pp', 'change_twh', 'rank_largest_drop', 'winters_compared', 'net_flow_gwh_d', 'net_flow_5y_avg_gwh_d', 'lng_sendout_gwh_d', 'lng_sendout_5y_avg_gwh_d', 'lng_sendout_last_year_gwh_d', 'closest_past_winters']]
+    .concat(rows.map(q => [q.code, addDays(q.s0, 1), q.d, q.f0, q.f1, q.ch, q.twh, q.rank, q.of, q.nf, q.nfp, q.lng, q.lngp, q.lngly, q.close.slice(0, 3).map(x => x.q.label).join(' ')])));
 });
 
 /* ---------- injection & withdrawal ---------- */
