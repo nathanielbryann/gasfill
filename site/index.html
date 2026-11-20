@@ -1277,7 +1277,6 @@ function renderWinter() {
     series.push({name: 'Median', vals: R.med, color: 'var(--ink-2)', width: 2, dash: '6 4', endLabel: 'median ' + fmtN(R.med[R.n], 0) + '%'});
     series.push({name: 'Actual', vals: actual, color: 'var(--ink)', width: 3});
     const refs = [], shades = [];
-    for (const m of (Y === 2026 && RULES[r.code]) || []) { const i = dates.indexOf(m.date); if (i >= 0) refs.push({v: m.min, label: m.label + ' (1 Feb)'}); }
     $('#ws-c-sub').textContent = cname(r.code) + ' · outlook started ' + fmtDay(addDays(R.d, 1)) + ' from ' + fmtN(R.f0, 1) + '%, actual to ' + fmtDM(r.d);
     $('#ws-note').innerHTML = whatIfNote(r.code, R, top[0] || r.close[0].q, true);
     $('#ws-key').innerHTML = '<span><i style="background:var(--ink);height:4px"></i>Actual</span><span><i class="dash"></i>Median of past winters</span><span><i class="box" style="background:var(--band)"></i>Range</span>' +
