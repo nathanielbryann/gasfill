@@ -175,7 +175,8 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .ins p { margin: 0; color: var(--ink-2); font-size: 14px; max-width: 78ch; }
 .ins b.n { font-family: var(--f-mono); color: var(--ink); font-weight: 700; }
 @media (max-width: 520px) { .ins { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
-#ol-table tbody tr, #ol-ytable tbody tr { cursor: pointer; }
+#ol-table tbody tr, #ol-ytable tbody tr, #ws-table tbody tr { cursor: pointer; }
+#ws-table tbody tr:hover td { background: var(--surface-2); }
 #ol-table tbody tr:hover td, #ol-ytable tbody tr:hover td { background: var(--surface-2); }
 #ol-ytable td.nm i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 8px; }
 .zp .ev { font-weight: 500; color: var(--muted); }
@@ -246,6 +247,26 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
     <h2>Countries <span class="sub" id="tbl-sub"></span></h2>
     <div class="tbl-scroll"><table id="ctable"><thead></thead><tbody></tbody></table></div>
     <div class="foot"><button class="btn sm" type="button" id="dl-snap">Download CSV</button><span>Click a row to open its seasonal curve and history.</span></div>
+  </section>
+
+  <section class="panel" id="winter" hidden>
+    <div class="chart-head"><h2>Winter so far <span class="sub" id="ws-sub"></span></h2></div>
+    <div class="ctrl">
+      <span class="lbl">Country</span><div class="chips" id="ws-chips"></div>
+      <div class="seg seg-sm push" id="ws-from" role="group" aria-label="Count from"><button type="button" data-v="oct">Since 1 Oct</button><button type="button" data-v="nov">Since 1 Nov</button><button type="button" data-v="own">Since withdrawal began</button></div>
+    </div>
+    <p class="sub-p" id="ws-msg" hidden></p>
+    <div id="ws-body">
+      <div class="kpis" id="ws-kpis"></div>
+      <h3 class="ph-h3">All countries <span id="ws-t-sub"></span></h3>
+      <div class="tbl-scroll"><table id="ws-table"><thead></thead><tbody></tbody></table></div>
+      <h3 class="ph-h3">Tracking against past winters <span id="ws-c-sub"></span></h3>
+      <div class="key" id="ws-key"></div>
+      <div class="chart-wrap" id="ws-chart"></div>
+      <h3 class="ph-h3">Milestones ahead <span id="ws-m-sub"></span></h3>
+      <div class="kpis" id="ws-miles"></div>
+      <div class="foot"><button class="btn sm" type="button" id="png-ws">Save PNG</button><button class="btn sm" type="button" id="dl-ws">Download CSV</button><span id="ws-foot"></span></div>
+    </div>
   </section>
 
   <section class="panel" id="outlook" hidden>
@@ -333,6 +354,7 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
       <li><b>LNG:</b> <a href="https://alsi.gie.eu" target="_blank" rel="noopener">GIE ALSI</a>, LNG terminals by country: send-out (regasified gas sent into the grid, GWh/d) and LNG in tanks against the declared maximum inventory. Shown as 7-day averages, with the 5-year range of the same 7-day window.</li>
       <li><b>Winter outlook:</b> starts from the chosen day's fill level and adds, day by day, the change in storage of the same calendar days in each past year (gas in storage change divided by that year's working gas volume, so capacity changes don't distort it), kept between 0% and 100%. Each past year gives one path; the chart shows them all, their median and range. From April to September it becomes a refill outlook to 1 December. It is a what-if on past patterns, not a forecast: it doesn't know this winter's weather, prices or LNG supply, and a nearly empty store can't withdraw as fast as a full one.</li>
       <li><b>Injection &amp; withdrawal:</b> injection and withdrawal are AGSI+ daily flows (GWh/d); net flow is injection minus withdrawal. <i>Days left at this pace</i> divides gas in storage (or the gap to 30% or 90%) by the last 7 days' average net flow, so it assumes that pace holds. <i>Cumulative since the season started</i> is the change in gas in storage since the end of 30 September (withdrawal season) or 31 March (injection season), in TWh. A season starts on the first day of a 14-day run in which the centred 7-day average net flow keeps the same sign, searched from the winter low (injection) or the autumn peak (withdrawal), so a short mild spell mid-winter doesn't count. Season totals add up daily injection (April–September) or withdrawal (October–March), so they are gross flows.</li>
+      <li><b>Winter so far:</b> compares the change in gas in storage since the chosen start (end of 30 September, end of 31 October, or the day before the country's withdrawal season began) with the same calendar days in each past winter since 2016, as a share of each year's capacity; rank 1 is the biggest drop. <i>Pace vs normal</i> compares the average net flow over those days with the five previous winters. <i>Tracking like</i> starts the winter outlook from the chosen start and names the past winters whose paths stayed closest to what actually happened (smallest average gap). <i>Milestones</i> come from the outlook run from the chosen day, plus a straight-line projection at the last 7 days' pace. Germany's 30% on 1 February is the national rule for winter 2026/27 (Gasspeicherfüllstandsverordnung, in force until 31 March 2027).</li>
       <li><b>What stands out:</b> automatic notes for the chosen day: records for the calendar day across all years in the data, streaks outside the 5-year range, the fastest 7-day changes for that week of the year, the filling target, the season's peak, TTF and LNG send-out.</li>
       <li><b>TTF:</b> <span id="ttf-src">TTF spot, EUR/MWh</span>.</li>
       <li><b>Map:</b> borders from entsoe-py (MIT) and Natural Earth (public domain). Grey countries aren't tracked yet.</li>
@@ -596,14 +618,14 @@ function setDate(d, opts = {}) {
   $('#d-slider').value = daysBetween(FIRST, d);
   $('#snap-title').textContent = fmtDay(d);
   renderKpis(); renderSnapView(); renderTable();
-  if (!opts.light) { renderInsights(); renderOutlook(); renderSeason(); renderFlows(); }
+  if (!opts.light) { renderInsights(); renderWinter(); renderOutlook(); renderSeason(); renderFlows(); }
 }
 function initDate() {
   const sl = $('#d-slider'), inp = $('#d-input');
   sl.max = daysBetween(FIRST, LAST); inp.min = FIRST; inp.max = LAST;
   let raf = 0;
   sl.addEventListener('input', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => setDate(addDays(FIRST, +sl.value), {light: true})); });
-  sl.addEventListener('change', () => { renderInsights(); renderOutlook(); renderSeason(); renderFlows(); });
+  sl.addEventListener('change', () => { renderInsights(); renderWinter(); renderOutlook(); renderSeason(); renderFlows(); });
   inp.addEventListener('change', () => { if (inp.value) setDate(inp.value); });
   $('#d-prev').addEventListener('click', () => setDate(addDays(ST.date, -1)));
   $('#d-next').addEventListener('click', () => setDate(addDays(ST.date, 1)));
@@ -621,7 +643,7 @@ function initDate() {
   }
   $('#d-ticks').innerHTML = ticks.join('');
 }
-function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; } $('#d-play').textContent = '▶ Play'; renderInsights(); renderOutlook(); renderSeason(); renderFlows(); }
+function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; } $('#d-play').textContent = '▶ Play'; renderInsights(); renderWinter(); renderOutlook(); renderSeason(); renderFlows(); }
 
 /* ---------- map and ranking ---------- */
 const FULL_BREAKS = [10, 20, 30, 40, 50, 60, 70, 80, 90];
@@ -779,7 +801,17 @@ function seasonDates(Y, mode) {
 }
 const seasonOf = (d, mode) => mode === 'gy' && +d.slice(5, 7) < 4 ? +d.slice(0, 4) - 1 : +d.slice(0, 4);
 const seasonLabel = (Y, mode) => mode === 'gy' ? Y + '/' + String(Y + 1).slice(2) : String(Y);
-const yearColour = Y => 'var(--s' + (((Y - 2021) % 8 + 8) % 8 + 1) + ')';
+const yearSlot = Y => ((Y - 2021) % 8 + 8) % 8 + 1;
+const yearColour = Y => 'var(--s' + yearSlot(Y) + ')';
+function pickColours(ys) {   // each year keeps its usual colour unless another shown year already has it
+  const used = new Set(), out = new Map();
+  for (const y of ys.slice().sort((a, b) => a - b)) {
+    let k = yearSlot(y);
+    if (used.has(k)) { for (let j = 1; j <= 8; j++) if (!used.has(j)) { k = j; break; } }
+    used.add(k); out.set(y, 'var(--s' + k + ')');
+  }
+  return out;
+}
 function seasonYears() {
   const first = +S.meta.display_from.slice(0, 4), last = seasonOf(LAST, ST.axis), ys = [];
   for (let y = first; y <= last; y++) ys.push(y);
@@ -973,14 +1005,14 @@ function horizonFor(d) {
 function pastLabel(d, k, kind) {
   const y = +d.slice(0, 4) - k, m = +d.slice(5, 7);
   if (kind === 'refill') return String(y);
-  const y0 = m >= 10 ? y : y - 1;
+  const y0 = m >= 4 ? y : y - 1;
   return y0 + '/' + String(y0 + 1).slice(2);
 }
-function pastStart(d, k, kind) { const y = +d.slice(0, 4) - k; return kind === 'refill' || +d.slice(5, 7) >= 10 ? y : y - 1; }
+function pastStart(d, k, kind) { const y = +d.slice(0, 4) - k; return kind === 'refill' || +d.slice(5, 7) >= 4 ? y : y - 1; }
 const endTxt = q => q.empty ? 'empty ' + fmtDM(q.empty) : fmtN(q.end, 0) + '%';
-function outlook(code, d0, nMax) {
+function outlook(code, d0, nMax, H0) {
   const d = reportedDay(code, d0); if (!d) return null;
-  const H = horizonFor(d0), n = daysBetween(d, H.end); if (n < 2) return null;
+  const H = H0 || horizonFor(d0), n = daysBetween(d, H.end); if (n < 2) return null;
   const f0 = val(code, 'full', d), paths = [];
   for (let k = 1; k <= nMax; k++) {
     if (addDays(yearsAgo(d, k), -1) < S.start) break;
@@ -1030,12 +1062,14 @@ function renderOutlook() {
     const series = R.paths.filter(q => !sel.has(q.y0) && !(ext && (q === low || q === high))).map(q => ({name: q.label, vals: line(q), color: 'var(--line-strong)', width: 1, noDot: true}));
     if (ext && !sel.has(high.y0)) series.push({name: 'like ' + high.label, vals: line(high), color: 'var(--inj)', width: 1.5, noDot: true, endLabel: high.label + ' ' + endTxt(high)});
     if (ext && !sel.has(low.y0)) series.push({name: 'like ' + low.label, vals: line(low), color: 'var(--wdr)', width: 1.5, noDot: true, endLabel: low.label + ' ' + endTxt(low)});
-    const picked = R.paths.filter(q => sel.has(q.y0)).sort((a, b) => a.y0 - b.y0);
-    for (const q of picked) series.push({name: 'like ' + q.label, vals: line(q), color: yearColour(q.y0), width: 2.25, endLabel: q.label + ' ' + endTxt(q)});
+    const picked = R.paths.filter(q => sel.has(q.y0)).sort((a, b) => a.y0 - b.y0), pc = pickColours(picked.map(q => q.y0));
+    OL.colours = pc;
+    const colOf = y => pc.get(y) || yearColour(y);
+    for (const q of picked) series.push({name: 'like ' + q.label, vals: line(q), color: colOf(q.y0), width: 2.25, endLabel: q.label + ' ' + endTxt(q)});
     // year picker: one chip per past season, with where it ends
     const yrs = R.paths.slice().sort((a, b) => a.y0 - b.y0);
     $('#ol-y-lbl').textContent = winter ? 'Past winters' : 'Past years';
-    $('#ol-years').innerHTML = yrs.map(q => '<button type="button" class="zp" data-y="' + q.y0 + '" aria-pressed="' + sel.has(q.y0) + '" title="Show the path like ' + q.label + '"><i style="background:' + yearColour(q.y0) + '"></i>' + q.label + ' <span class="ev">' + endTxt(q) + '</span></button>').join('') +
+    $('#ol-years').innerHTML = yrs.map(q => '<button type="button" class="zp" data-y="' + q.y0 + '" aria-pressed="' + sel.has(q.y0) + '" title="Show the path like ' + q.label + '"><i style="background:' + colOf(q.y0) + '"></i>' + q.label + ' <span class="ev">' + endTxt(q) + '</span></button>').join('') +
       '<button type="button" class="zp opt" data-y="ext" aria-pressed="' + OL.ext + '">Lowest &amp; highest</button><button type="button" class="zp opt" data-y="all" aria-pressed="false">All</button><button type="button" class="zp opt" data-y="none" aria-pressed="false">None</button>';
     $('#ol-years').querySelectorAll('.zp').forEach(b => b.addEventListener('click', () => {
       const v = b.dataset.y;
@@ -1058,7 +1092,7 @@ function renderOutlook() {
     $('#ol-sub').textContent = cname(code) + ' · from ' + fmtDay(R.d) + ' (' + fmtN(R.f0, 1) + '%) · ' + R.paths.length + ' past ' + (winter ? 'winters' : 'years');
     $('#ol-key').innerHTML = '<span><i style="background:var(--ink);height:4px"></i>Actual</span><span><i class="dash"></i>Median of past years</span><span><i class="box" style="background:var(--band)"></i>Range</span>' +
       '<span><i style="background:var(--line-strong)"></i>One past ' + (winter ? 'winter' : 'year') + ' each</span>' + (ext ? '<span><i style="background:var(--wdr)"></i>Lowest end</span><span><i style="background:var(--inj)"></i>Highest end</span>' : '') +
-      picked.map(q => '<span><i style="background:' + yearColour(q.y0) + ';height:3px"></i>Like ' + q.label + '</span>').join('') +
+      picked.map(q => '<span><i style="background:' + colOf(q.y0) + ';height:3px"></i>Like ' + q.label + '</span>').join('') +
       (refs.length ? '<span><i class="tgt"></i>90% target</span>' : '');
     plot($('#ol-chart'), {
       n: N, series, band: {lo: dates.map((_, i) => at(R.lo, i)), hi: dates.map((_, i) => at(R.hi, i))}, xTicks: ticks, unit: '%', clamp: [0, 100], padR: R.paths.some(q => q.empty) ? 132 : 92,
@@ -1069,7 +1103,7 @@ function renderOutlook() {
         if (ok(actual[i])) h += '<br>' + swatch('var(--ink)') + 'Actual <b>' + fmtN(actual[i], 1) + '%</b>';
         if (idx(i) > 0) {
           h += '<br>' + swatch('var(--ink-2)') + 'Median <b>' + fmtN(R.med[idx(i)], 1) + '%</b> <span class="mut">range ' + fmtN(R.lo[idx(i)], 0) + '–' + fmtN(R.hi[idx(i)], 0) + '</span>';
-          for (const q of picked.slice().sort((a, b) => b.p[idx(i)] - a.p[idx(i)])) h += '<br>' + swatch(yearColour(q.y0)) + 'Like ' + q.label + ' <b>' + fmtN(q.p[idx(i)], 1) + '%</b>';
+          for (const q of picked.slice().sort((a, b) => b.p[idx(i)] - a.p[idx(i)])) h += '<br>' + swatch(colOf(q.y0)) + 'Like ' + q.label + ' <b>' + fmtN(q.p[idx(i)], 1) + '%</b>';
           const rest = R.paths.filter(q => !sel.has(q.y0)).sort((a, b) => b.p[idx(i)] - a.p[idx(i)]);
           if (rest.length) h += '<br><span class="mut">' + rest.map(q => q.label + ' ' + fmtN(q.p[idx(i)], 0)).join(' · ').replace(/((?:[^·]*·){3}[^·]*)·/g, '$1<br>') + '</span>';
         }
@@ -1101,7 +1135,7 @@ function renderOutlook() {
   $('#ol-ytable thead').innerHTML = '<tr><th>' + (winter ? 'Like winter' : 'Like year') + '</th>' + rows.map(({c}) => '<th class="num">' + (c.aggregate ? 'EU total' : esc(c.code)) + '<small>' + endLab + ', %</small></th>').join('') + '</tr>';
   $('#ol-ytable tbody').innerHTML = ys.map(y => {
     const r = by.get(y);
-    return '<tr data-y="' + y + '" class="' + (sel.has(y) ? 'sel' : '') + '"><td class="nm"><i style="background:' + yearColour(y) + '"></i>' + r.label + '</td>' +
+    return '<tr data-y="' + y + '" class="' + (sel.has(y) ? 'sel' : '') + '"><td class="nm"><i style="background:' + ((OL.colours && OL.colours.get(y)) || yearColour(y)) + '"></i>' + r.label + '</td>' +
       rows.map(({c}) => { const q = r.v[c.code]; return '<td class="num">' + (q ? (q.empty ? 'empty ' + fmtDM(q.empty) : fmtN(q.end, 1)) + (!winter && c.eu_target && q.win >= 90 ? ' <span class="est">≥90</span>' : '') : '–') + '</td>'; }).join('') + '</tr>';
   }).join('') + '<tr class="agg"><td>Median</td>' + rows.map(({R: q}) => '<td class="num">' + fmtN(q.med[q.n], 1) + '</td>').join('') + '</tr>';
   $('#ol-ytable tbody').querySelectorAll('tr[data-y]').forEach(tr => tr.addEventListener('click', () => {
@@ -1114,6 +1148,149 @@ $('#dl-ol').addEventListener('click', () => {
   const rows = [head];
   for (let i = 0; i <= R.n; i++) { const t = addDays(R.d, i); rows.push([t, t <= LAST ? val(R.code, 'full', t) : null, R.med[i], R.lo[i], R.hi[i]].concat(R.paths.map(q => q.p[i]))); }
   saveCSV('outlook-' + R.code + '-from-' + R.d + '.csv', rows);
+});
+
+/* ---------- winter so far ---------- */
+const WS = {from: lsGet('ws-from', 'nov')};
+const ord = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+const winterOf = d => { const m = +d.slice(5, 7), y = +d.slice(0, 4); return m >= 10 ? y : m <= 3 ? y - 1 : null; };
+const RULES = {DE: [{date: '2027-02-01', min: 30, label: '30% rule'}]};   // national rules for winter 2026/27 only
+function wsStart(code, d) {   // end of the day before the winter count starts
+  const Y = winterOf(d); if (Y === null) return null;
+  if (WS.from === 'oct') return Y + '-09-30';
+  if (WS.from === 'nov') return Y + '-10-31';
+  const r = seasonStats(code).find(x => x.Y === Y);
+  return r && r.wdrStart && r.wdrStart <= d ? addDays(r.wdrStart, -1) : null;
+}
+function wsRow(code, d0) {
+  const d = reportedDay(code, d0); if (!d) return null;
+  const s0 = wsStart(code, d); if (!s0 || s0 >= d) return null;
+  const n = daysBetween(s0, d), g0 = val(code, 'gas', s0), g1 = val(code, 'gas', d), w = val(code, 'wgv', d);
+  if (!ok(g0) || !ok(g1) || !ok(w)) return null;
+  const ch = (g1 - g0) / w * 100, past = [];
+  for (let k = 1; k <= 15; k++) {
+    const a = yearsAgo(s0, k), b = yearsAgo(d, k); if (a < S.start) break;
+    const y0 = val(code, 'gas', a), y1 = val(code, 'gas', b), ww = val(code, 'wgv', b);
+    if (ok(y0) && ok(y1) && ok(ww) && ww > 0) past.push({y: winterOf(b) ?? +b.slice(0, 4), v: (y1 - y0) / ww * 100});
+  }
+  const nf = mean(t => net(code, t), d, n), nfs = [];
+  for (let k = 1; k <= 5; k++) { const v = mean(t => net(code, t), yearsAgo(d, k), n); if (ok(v)) nfs.push(v); }
+  const nfp = nfs.length >= 3 ? nfs.reduce((a, b) => a + b, 0) / nfs.length : null;
+  let lng = null, lngp = null;
+  if (hasLNG(code)) {
+    lng = mean(t => lval(code, 'sendOut', t), d, n); const ls = [];
+    for (let k = 1; k <= 5; k++) { const v = mean(t => lval(code, 'sendOut', t), yearsAgo(d, k), n); if (ok(v)) ls.push(v); }
+    lngp = ls.length >= 3 ? ls.reduce((a, b) => a + b, 0) / ls.length : null;
+  }
+  // which past winters this one has tracked most closely since the start
+  const Yw = winterOf(d), R = outlook(code, s0, OL.n, {kind: 'winter', end: (Yw + 1) + '-03-31'});
+  let close = [], gapMed = null;
+  if (R) {
+    const act = i => val(code, 'full', addDays(R.d, i)), m = Math.min(n, R.n);
+    close = R.paths.map(q => { let e = 0, c = 0; for (let i = 1; i <= m; i++) { const a = act(i); if (ok(a)) { e += Math.abs(q.p[i] - a); c++; } } return {q, gap: c ? e / c : Infinity}; }).sort((a, b) => a.gap - b.gap);
+    const a = act(m); if (ok(a)) gapMed = a - R.med[m];
+  }
+  return {code, s0, d, n, f0: val(code, 'full', s0), f1: val(code, 'full', d), ch, twh: g1 - g0, rank: 1 + past.filter(p => p.v < ch).length, of: past.length + 1, past,
+    nf, nfp, lng, lngp, R, close, gapMed};
+}
+const paceTxt = r => !ok(r.nf) || !ok(r.nfp) ? '–' : (r.nf < 0 && r.nfp < -50 ? fmtN(r.nf / r.nfp * 100, 0) + '%' : fmtS(r.nf - r.nfp, 0));
+function renderWinter() {
+  if (!S) return;
+  $('#ws-chips').innerHTML = CO.map(c => '<button type="button" class="zp" data-c="' + c.code + '" aria-pressed="' + (c.code === ST.code) + '"><i style="background:var(--ink)"></i>' + esc(c.code) + '</button>').join('');
+  $('#ws-chips').querySelectorAll('.zp').forEach(b => b.addEventListener('click', () => selectCountry(b.dataset.c, false)));
+  segInitPaint('#ws-from', WS.from);
+  const Y = winterOf(ST.date);
+  if (Y === null) {
+    $('#ws-msg').hidden = false; $('#ws-body').hidden = true; $('#ws-sub').textContent = '';
+    $('#ws-msg').textContent = 'The chosen day (' + fmtDay(ST.date) + ') is in the injection season. Pick a day between October and March, or press Latest, to see a winter so far.';
+    return;
+  }
+  $('#ws-msg').hidden = true; $('#ws-body').hidden = false;
+  const fromTxt = r => WS.from === 'oct' ? '1 Oct' : WS.from === 'nov' ? '1 Nov' : fmtDM(addDays(r.s0, 1));
+  const rows = CO.map(c => ({c, r: wsRow(c.code, ST.date)})).filter(x => x.r);
+  const me = rows.find(x => x.c.code === ST.code), r = me && me.r;
+  $('#ws-sub').textContent = 'winter ' + Y + '/' + String(Y + 1).slice(2) + ' · to gas day ' + fmtDay(ST.date);
+  if (!r) {
+    $('#ws-kpis').innerHTML = '<p class="sub-p">' + (WS.from === 'own' ? esc(cname(ST.code)) + '\'s withdrawal season hadn\'t started by this day.' : 'Not enough data for ' + esc(cname(ST.code)) + ' on this day.') + '</p>';
+  } else {
+    const tiles = [
+      ['Since ' + fromTxt(r), fmtS(r.ch, 1) + '<small>pp</small>', fmtN(r.f0, 1) + '% → ' + fmtN(r.f1, 1) + '% · ' + fmtS(r.twh, 1) + ' TWh in ' + r.n + ' days'],
+      ['Rank', (r.ch < 0 ? ord(r.rank) : '–') + '<small>' + (r.ch < 0 ? 'largest drop' : '') + '</small>', r.ch < 0 ? 'of ' + r.of + ' winters since ' + Math.min(...r.past.map(p => p.y), Y) + ' over the same days' : 'storage rose over these days'],
+      ['Pace vs normal', paceTxt(r) + (r.nf < 0 && r.nfp < -50 ? '<small>of normal</small>' : '<small>GWh/d</small>'), 'net flow ' + fmtS(r.nf, 0) + ' GWh/d vs ' + fmtS(r.nfp, 0) + ' (5-yr avg)'],
+      ['Tracking like', r.close.length ? r.close[0].q.label : '–', r.close.length > 2 ? 'then ' + r.close[1].q.label + ', ' + r.close[2].q.label + (ok(r.gapMed) ? ' · ' + fmtS(r.gapMed, 1) + ' pp vs the median path' : '') : ''],
+    ];
+    if (ok(r.lng) && ok(r.lngp)) tiles.push(['LNG send-out', fmtS((r.lng / r.lngp - 1) * 100, 0) + '<small>% vs normal</small>', fmtN(r.lng, 0) + ' GWh/d vs ' + fmtN(r.lngp, 0) + ' (5-yr avg, same days)']);
+    $('#ws-kpis').innerHTML = tiles.map(([l, v, s2]) => '<div class="kpi"><span class="l">' + esc(l) + '</span><span class="v">' + v + '</span><span class="s">' + esc(s2) + '</span></div>').join('');
+  }
+  // all countries
+  $('#ws-t-sub').textContent = WS.from === 'own' ? 'each from the day its withdrawal season began' : 'since ' + (WS.from === 'oct' ? '1 October' : '1 November');
+  $('#ws-table thead').innerHTML = '<tr><th>Country</th><th class="num">From</th><th class="num">Then<small>%</small></th><th class="num">Now<small>%</small></th><th class="num">Change<small>pp</small></th><th class="num">Change<small>TWh</small></th><th class="num">Rank<small>largest drop</small></th><th class="num">Net flow<small>GWh/d, avg</small></th><th class="num">vs normal</th><th class="num">LNG<small>vs normal</small></th><th>Tracking like</th></tr>';
+  $('#ws-table tbody').innerHTML = rows.map(({c, r: q}) => '<tr data-c="' + c.code + '" class="' + (c.aggregate ? 'agg ' : '') + (c.code === ST.code ? 'sel' : '') + '"><td>' + (c.aggregate ? 'EU total' : esc(c.code) + ' · ' + esc(c.name)) + '</td>' +
+    '<td class="num">' + fmtDM(addDays(q.s0, 1)) + '</td><td class="num">' + fmtN(q.f0, 1) + '</td><td class="num">' + fmtN(q.f1, 1) + '</td><td class="num">' + fmtS(q.ch, 1) + '</td><td class="num">' + fmtS(q.twh, 1) + '</td>' +
+    '<td class="num">' + (q.ch < 0 ? ord(q.rank) + ' of ' + q.of : '–') + '</td><td class="num">' + fmtS(q.nf, 0) + '</td><td class="num">' + paceTxt(q) + '</td>' +
+    '<td class="num">' + (ok(q.lng) && ok(q.lngp) ? fmtS((q.lng / q.lngp - 1) * 100, 0) + '%' : '–') + '</td><td>' + (q.close.length ? q.close.slice(0, 2).map(x => x.q.label).join(', ') : '–') + '</td></tr>').join('');
+  $('#ws-table tbody').querySelectorAll('tr').forEach(tr => tr.addEventListener('click', () => selectCountry(tr.dataset.c, false)));
+  // tracking chart: the outlook from the start, with the actual path on top
+  if (r && r.R) {
+    const R = r.R, N = R.n + 1, today = daysBetween(R.d, r.d), top = r.close.slice(0, 3).map(x => x.q), topSet = new Set(top), tc = pickColours(top.map(q => q.y0));
+    const dates = Array.from({length: N}, (_, i) => addDays(R.d, i));
+    const actual = dates.map(t => t <= r.d ? val(r.code, 'full', t) : null);
+    const series = R.paths.filter(q => !topSet.has(q)).map(q => ({name: q.label, vals: q.p, color: 'var(--line-strong)', width: 1, noDot: true}));
+    for (const q of top) series.push({name: 'Like ' + q.label, vals: q.p, color: tc.get(q.y0), width: 2, endLabel: q.label + ' ' + endTxt(q)});
+    series.push({name: 'Median', vals: R.med, color: 'var(--ink-2)', width: 2, dash: '6 4', endLabel: 'median ' + fmtN(R.med[R.n], 0) + '%'});
+    series.push({name: 'Actual', vals: actual, color: 'var(--ink)', width: 3});
+    const refs = [], shades = [];
+    for (const m of (Y === 2026 && RULES[r.code]) || []) { const i = dates.indexOf(m.date); if (i >= 0) refs.push({v: m.min, label: m.label + ' (1 Feb)'}); }
+    $('#ws-c-sub').textContent = cname(r.code) + ' · outlook started ' + fmtDay(addDays(R.d, 1)) + ' from ' + fmtN(R.f0, 1) + '%, actual to ' + fmtDM(r.d);
+    $('#ws-key').innerHTML = '<span><i style="background:var(--ink);height:4px"></i>Actual</span><span><i class="dash"></i>Median of past winters</span><span><i class="box" style="background:var(--band)"></i>Range</span>' +
+      top.map((q, k) => '<span><i style="background:' + tc.get(q.y0) + '"></i>' + (k === 0 ? 'Closest so far: ' : '') + 'like ' + q.label + '</span>').join('') + '<span><i style="background:var(--line-strong)"></i>Other past winters</span>' + (refs.length ? '<span><i class="tgt"></i>National rule</span>' : '');
+    plot($('#ws-chart'), {
+      n: N, series, band: {lo: R.lo, hi: R.hi}, unit: '%', clamp: [0, 100], padR: R.paths.some(q => q.empty) ? 132 : 96, refs, shades,
+      vlines: [{i: today, label: 'today'}], H: ($('#ws-chart').clientWidth || 600) < 520 ? 250 : 320,
+      xTicks: dates.map((t, i) => t.slice(8) === '01' ? [i, MON[+t.slice(5, 7) - 1]] : null).filter(Boolean),
+      aria: 'Winter so far against past winters for ' + cname(r.code),
+      tip: i => {
+        let h = '<b>' + fmtDay(dates[i]) + '</b>';
+        if (ok(actual[i])) h += '<br>' + swatch('var(--ink)') + 'Actual <b>' + fmtN(actual[i], 1) + '%</b>';
+        h += '<br>' + swatch('var(--ink-2)') + 'Median ' + fmtN(R.med[i], 1) + '% <span class="mut">range ' + fmtN(R.lo[i], 0) + '–' + fmtN(R.hi[i], 0) + '</span>';
+        for (const q of top) h += '<br>' + swatch(tc.get(q.y0)) + 'Like ' + q.label + ' ' + fmtN(q.p[i], 1) + '%';
+        return h;
+      },
+    });
+  } else { $('#ws-chart').innerHTML = ''; $('#ws-key').innerHTML = ''; $('#ws-c-sub').textContent = ''; }
+  // milestones ahead, from the chosen day
+  const Rn = r && outlook(r.code, r.d, OL.n);
+  if (Rn && Rn.H.kind === 'winter') {
+    const cards = [], at = t => daysBetween(Rn.d, t), feb = (Y + 1) + '-02-01', mar = Rn.H.end;
+    const w = val(r.code, 'wgv', r.d), n7 = mean(t => net(r.code, t), r.d, 7);
+    const pace = i => ok(n7) && ok(w) ? Math.max(0, Math.min(100, r.f1 + n7 * i / (w * 10))) : null;
+    const lvlAt = i => ({med: Rn.med[i], lo: Rn.lo[i], hi: Rn.hi[i], below: th => Rn.paths.filter(q => q.p[i] < th).length});
+    if (at(feb) > 0) {
+      const i = at(feb), L1 = lvlAt(i), rule = Y === 2026 && (RULES[r.code] || []).find(m => m.date === feb);
+      cards.push(['On 1 Feb', fmtN(L1.med, 0) + '<small>% median</small>', 'range ' + fmtN(L1.lo, 0) + '–' + fmtN(L1.hi, 0) + '%; at this week\'s pace ' + fmtN(pace(i), 0) + '%' +
+        (rule ? '. ' + rule.label + ': ' + (L1.below(rule.min) ? 'missed in ' + L1.below(rule.min) + ' of ' + Rn.paths.length + ' past winters' : 'met in all past winters') : '')]);
+    }
+    { const i = at(mar), L2 = lvlAt(i), m5 = []; for (let k = 0; k < 5; k++) { const v = val(r.code, 'full', (Y - k) + '-03-31'); if (ok(v)) m5.push(v); }
+      const lo5 = m5.length ? Math.min(...m5) : null, hi5 = m5.length ? Math.max(...m5) : null;
+      cards.push(['On 31 Mar', fmtN(L2.med, 0) + '<small>% median</small>', 'range ' + fmtN(L2.lo, 0) + '–' + fmtN(L2.hi, 0) + '%' + (ok(lo5) ? '; 5-yr range ' + fmtN(lo5, 0) + '–' + fmtN(hi5, 0) + '%' + (L2.med < lo5 ? ', median below it' : L2.med > hi5 ? ', median above it' : '') : '')]); }
+    { const cross = Rn.paths.map(q => { const k = q.p.findIndex(v => v < 30); return k > 0 ? addDays(Rn.d, k) : null; }), hit = cross.filter(Boolean).sort();
+      cards.push(['Below 30%', r.f1 < 30 ? 'already' : hit.length ? fmtDM(hit[Math.floor((hit.length - 1) / 2)]) : 'not by 31 Mar', r.f1 < 30 ? 'below 30% now' : hit.length ? 'in ' + hit.length + ' of ' + Rn.paths.length + ' past winters; earliest ' + fmtDM(hit[0]) : 'in none of ' + Rn.paths.length + ' past winters']); }
+    { const em = Rn.paths.filter(q => q.empty).sort((a, b) => a.empty < b.empty ? -1 : 1);
+      cards.push(['Runs empty', em.length + '<small> of ' + Rn.paths.length + '</small>', em.length ? 'earliest ' + fmtDM(em[0].empty) + ' (like ' + em[0].label + ')' : 'in no past winter before 31 Mar']); }
+    $('#ws-m-sub').textContent = 'from ' + fmtDay(r.d) + ' (' + fmtN(r.f1, 1) + '%), ' + Rn.paths.length + ' past winters';
+    $('#ws-miles').innerHTML = cards.map(([l, v, s2]) => '<div class="kpi"><span class="l">' + esc(l) + '</span><span class="v">' + v + '</span><span class="s">' + esc(s2) + '</span></div>').join('');
+  } else { $('#ws-miles').innerHTML = ''; $('#ws-m-sub').textContent = ''; }
+  $('#ws-foot').textContent = r && r.close.length ? cname(r.code) + ' has tracked closest to ' + r.close[0].q.label + ' so far (average gap ' + fmtN(r.close[0].gap, 1) + ' pp).' : '';
+}
+$('#ws-from').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; WS.from = b.dataset.v; lsSet('ws-from', WS.from); renderWinter(); });
+$('#png-ws').addEventListener('click', () => savePNG({
+  name: 'winter-so-far-' + ST.code + '-' + ST.date, title: 'Winter so far · ' + cname(ST.code), sub: $('#ws-c-sub').textContent + '. ' + $('#ws-foot').textContent,
+  blocks: [{el: $('#ws-chart'), keyEl: $('#ws-key')}], foot: srcLine('. Past-winter paths are what-ifs, not forecasts'),
+}));
+$('#dl-ws').addEventListener('click', () => {
+  const rows = CO.map(c => wsRow(c.code, ST.date)).filter(Boolean);
+  saveCSV('winter-so-far-' + WS.from + '-' + ST.date + '.csv', [['code', 'from', 'to', 'fill_then_pct', 'fill_now_pct', 'change_pp', 'change_twh', 'rank_largest_drop', 'winters_compared', 'net_flow_gwh_d', 'net_flow_5y_avg_gwh_d', 'lng_sendout_gwh_d', 'lng_sendout_5y_avg_gwh_d', 'closest_past_winters']]
+    .concat(rows.map(q => [q.code, addDays(q.s0, 1), q.d, q.f0, q.f1, q.ch, q.twh, q.rank, q.of, q.nf, q.nfp, q.lng, q.lngp, q.close.slice(0, 3).map(x => x.q.label).join(' ')])));
 });
 
 /* ---------- injection & withdrawal ---------- */
@@ -1475,12 +1652,12 @@ $('#png-hist').addEventListener('click', () => savePNG({
 function selectCountry(code, scroll) {
   if (!S.series[code]) return;
   ST.code = code; lsSet('code', code);
-  renderChips(); renderTable(); renderOutlook(); renderSeason(); renderFlows(); renderHist();
+  renderChips(); renderTable(); renderWinter(); renderOutlook(); renderSeason(); renderFlows(); renderHist();
   if (scroll) $('#season').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 function renderAll() {
   if (!S) return;
-  renderKpis(); renderSnapView(); renderInsights(); renderTable(); renderOutlook(); renderChips(); renderSeason(); renderFlows(); renderHist();
+  renderKpis(); renderSnapView(); renderInsights(); renderTable(); renderWinter(); renderOutlook(); renderChips(); renderSeason(); renderFlows(); renderHist();
 }
 let rz = 0;
 window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderAll, 150); });
@@ -1506,7 +1683,7 @@ async function boot() {
   if (!CO.some(c => c.code === ST.code)) ST.code = CO[0].code;
   FIRST = S.meta.display_from > S.start ? S.meta.display_from : S.start;
   LAST = END;
-  ['#snap', '#ins-panel', '#tbl', '#outlook', '#season', '#flows', '#hist'].forEach(id => { $(id).hidden = false; });
+  ['#snap', '#ins-panel', '#tbl', '#winter', '#outlook', '#season', '#flows', '#hist'].forEach(id => { $(id).hidden = false; });
   $('#gen-note').textContent = 'Data file built ' + (S.meta.generated || '?') + ' from ' + S.meta.source + '; history fetched from ' + S.start + ' so every day since ' + FIRST + ' has five earlier years to compare with.';
   segInit('#m-metric', ST.metric, v => { ST.metric = v; lsSet('metric', v); renderSnapView(); });
   segInit('#m-how', ST.how, v => { ST.how = v; lsSet('how', v); renderSnapView(); });
