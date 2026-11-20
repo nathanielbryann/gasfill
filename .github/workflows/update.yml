@@ -1,7 +1,8 @@
-# Fetches the latest AGSI+ storage data and TTF, commits them, and republishes the site.
+# Fetches the latest AGSI+ storage, ALSI LNG and TTF data, commits them, and republishes the site.
 #
 # Started by cron-job.org (a POST to this workflow's "dispatches" API, see README), by the
-# "Run workflow" button in the Actions tab, or by pushing a change to .github/update-now.txt.
+# "Run workflow" button in the Actions tab, or by pushing a change to .github/update-now.txt
+# (daily update) or .github/refetch-all.txt (everything again from fetch_from).
 # GitHub's own schedule isn't used: it only runs for the person who last edited the cron line.
 name: Update storage data and deploy
 
@@ -27,7 +28,7 @@ concurrency:
 jobs:
   update-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 50
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
@@ -44,18 +45,24 @@ jobs:
       - name: Decide what to fetch
         id: what
         run: |
-          fetch=false
+          fetch=false; full=false
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then fetch=true; fi
-          if [ "${{ github.event_name }}" = "push" ] && git diff --name-only HEAD~1 HEAD | grep -qE '^(\.github/update-now\.txt|config\.json)$'; then fetch=true; fi
+          if [ "${{ inputs.full }}" = "true" ]; then full=true; fi
+          if [ "${{ github.event_name }}" = "push" ]; then
+            changed=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || true)
+            if echo "$changed" | grep -qE '^(\.github/update-now\.txt|config\.json)$'; then fetch=true; fi
+            if echo "$changed" | grep -qE '^\.github/refetch-all\.txt$'; then fetch=true; full=true; fi
+          fi
           echo "fetch=$fetch" >> "$GITHUB_OUTPUT"
+          echo "full=$full" >> "$GITHUB_OUTPUT"
 
-      - name: Fetch AGSI+ storage
+      - name: Fetch AGSI+ storage and ALSI LNG
         if: steps.what.outputs.fetch == 'true'
         env:
           AGSI_API_KEY: ${{ secrets.AGSI_API_KEY }}
           PYTHONUNBUFFERED: "1"
         run: |
-          if [ "${{ inputs.full }}" = "true" ]; then python scripts/fetch_agsi.py --full; else python scripts/fetch_agsi.py; fi
+          if [ "${{ steps.what.outputs.full }}" = "true" ]; then python scripts/fetch_gie.py --full; else python scripts/fetch_gie.py; fi
 
       - name: Fetch TTF
         if: steps.what.outputs.fetch == 'true'

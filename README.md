@@ -6,7 +6,7 @@ injection/withdrawal and TTF on one time axis. Data: [GIE AGSI+](https://agsi.gi
 Spotrank, but no game.
 
 - `site/` is the website (GitHub Pages). One file, `site/index.html`, no libraries.
-- `site/data/storage.json` holds the daily AGSI+ data, written by `scripts/fetch_agsi.py`.
+- `site/data/storage.json` holds the daily AGSI+ data, written by `scripts/fetch_gie.py`.
 - `site/data/ttf.json` holds TTF, written by `scripts/fetch_ttf.py`.
 - `site/data/countries-map.json` holds the map shapes for every European country (`scripts/build_map.py`, run once).
 - `config.json` lists the countries and dates.
@@ -42,12 +42,12 @@ locally instead (below).
 ## Run it locally
 
 ```
-AGSI_API_KEY=your-key python scripts/fetch_agsi.py --full
+AGSI_API_KEY=your-key python scripts/fetch_gie.py --full
 python scripts/fetch_ttf.py
 python -m http.server -d site 8000      # then open http://localhost:8000
 ```
 
-On Windows PowerShell: `$env:AGSI_API_KEY="your-key"; python scripts/fetch_agsi.py --full`.
+On Windows PowerShell: `$env:AGSI_API_KEY="your-key"; python scripts/fetch_gie.py --full`.
 Only the Python standard library is used. `python tests/test_fetch.py` checks the fetcher offline.
 
 ## Adding a country

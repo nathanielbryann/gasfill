@@ -1,6 +1,6 @@
-"""Offline checks for scripts/fetch_agsi.py: parsing, paging, merging and the file round trip.
+"""Offline checks for scripts/fetch_gie.py: parsing (flat and nested), year chunks, paging, merging, round trip.
 
-The rows below are a hand-made fixture shaped like the AGSI+ API documentation (v006), not real data.
+The rows below are hand-made fixtures shaped like the GIE API documentation, not real data.
     python tests/test_fetch.py
 """
 import datetime as dt
@@ -10,49 +10,67 @@ import sys
 import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "scripts"))
-import fetch_agsi as fa  # noqa: E402
+import fetch_gie as fg  # noqa: E402
+
+AGSI, ALSI = fg.DATASETS["agsi"], fg.DATASETS["alsi"]
 
 
-def fake_row(day, full, status="C"):
+def agsi_row(day, full, status="C"):
     return {"name": "Fixture", "code": "XX", "url": "XX", "gasDayStart": day, "gasInStorage": f"{full * 2.5:.4f}",
             "injection": "120.50", "withdrawal": "-", "workingGasVolume": "250.0000", "injectionCapacity": "1200.00",
             "withdrawalCapacity": "2000.00", "status": status, "trend": "0.05", "full": f"{full:.2f}",
             "consumption": "850.0000", "consumptionFull": f"{full * 0.3:.2f}", "info": []}
 
 
+def alsi_row(day, nested=True):
+    if nested:
+        return {"gasDayStart": day, "inventory": {"lng": "350.5", "gwh": "2400.2"}, "sendOut": "310.4",
+                "dtmi": {"lng": "700", "gwh": "4800"}, "dtrs": "500", "status": "C"}
+    return {"gasDayStart": day, "inventory": "2400.2", "sendOut": "310.4", "dtmi": "4800", "dtrs": "500", "status": "E"}
+
+
 def main():
-    # parsing: strings to numbers, "-" to None, status kept, bad dates dropped
-    rows = fa.parse_rows([fake_row("2026-11-17", 80.12), fake_row("2026-11-18", 79.5, "E"), {"gasDayStart": "nope"}])
+    rows = fg.parse_rows([agsi_row("2026-11-17", 80.12), agsi_row("2026-11-18", 79.5, "E"), {"gasDayStart": "nope"}], AGSI["fields"])
     assert list(rows) == ["2026-11-17", "2026-11-18"], rows
     r = rows["2026-11-18"]
     assert r["full"] == 79.5 and r["wdr"] is None and r["status"] == "E" and r["wgv"] == 250.0, r
 
-    # paging: three pages, every page fetched once, rows merged
-    calls = []
-    def fake_get(params, key):
-        calls.append(params["page"])
-        day = dt.date(2026, 1, 1) + dt.timedelta(days=params["page"] - 1)
-        return {"last_page": 3, "total": 3, "data": [fake_row(day.isoformat(), 50 + params["page"])]}
-    real = fa.api_get
-    fa.api_get = fake_get
-    try:
-        got = fa.fetch_range({"country": "XX"}, "2026-01-01", "2026-01-03", "key")
-    finally:
-        fa.api_get = real
-    assert calls == [1, 2, 3] and len(got) == 3 and got["2026-01-03"]["full"] == 53, (calls, got)
+    a = fg.parse_rows([alsi_row("2026-11-18")], ALSI["fields"])["2026-11-18"]
+    assert a["inv"] == 2400.2 and a["invLng"] == 350.5 and a["sendOut"] == 310.4 and a["dtmi"] == 4800 and a["dtrs"] == 500, a
+    b = fg.parse_rows([alsi_row("2026-11-18", nested=False)], ALSI["fields"])["2026-11-18"]
+    assert b["inv"] == 2400.2 and b["invLng"] is None and b["dtmi"] == 4800 and b["status"] == "E", b
 
-    # file round trip: write columnar JSON, read it back unchanged
+    assert list(fg.year_chunks("2024-11-01", "2026-02-03")) == [("2024-11-01", "2024-12-31"), ("2025-01-01", "2025-12-31"), ("2026-01-01", "2026-02-03")]
+
+    # paging inside one chunk, and one call series per year chunk
+    calls = []
+    def fake_get(api, params, key):
+        calls.append((params["from"][:4], params["page"]))
+        day = dt.date.fromisoformat(params["from"]) + dt.timedelta(days=params["page"] - 1)
+        return {"last_page": 2, "data": [agsi_row(day.isoformat(), 50 + params["page"])]}
+    real = fg.api_get
+    fg.api_get = fake_get
+    try:
+        got = fg.fetch_range(AGSI, {"country": "XX"}, "2025-12-30", "2026-01-02", "key")
+    finally:
+        fg.api_get = real
+    assert calls == [("2025", 1), ("2025", 2), ("2026", 1), ("2026", 2)], calls
+    assert sorted(got) == ["2025-12-30", "2025-12-31", "2026-01-01", "2026-01-02"], got
+
+    # round trip: write columnar JSON, read it back unchanged; first/last mark reported days only
     with tempfile.TemporaryDirectory() as tmp:
-        fa.OUT = os.path.join(tmp, "storage.json")
-        cfg = {"fetch_from": "2026-01-01", "display_from": "2026-01-01",
+        ds = dict(AGSI, out=os.path.join(tmp, "storage.json"))
+        cfg = {"fetch_from": "2025-12-29", "display_from": "2025-12-29",
                "countries": [{"code": "XX", "name": "Fixture", "agsi": {"country": "XX"}, "eu_target": True}]}
         data = {"XX": dict(got)}
-        fa.write(cfg, data)
-        back = fa.load_existing()
+        data["XX"]["2025-12-29"] = {k: None for k in AGSI["fields"]} | {"status": "N"}
+        fg.write(ds, cfg, data, "agsi")
+        back = fg.load_existing(ds)
         assert back["XX"] == data["XX"], (back, data)
-        js = json.load(open(fa.OUT))
-        assert js["series"]["XX"]["status"] == "CCC" and js["end"] == "2026-01-03", js
-    print("fetch_agsi tests passed")
+        js = json.load(open(ds["out"]))
+        s = js["series"]["XX"]
+        assert s["status"] == "NCCCC" and s["first"] == "2025-12-30" and s["last"] == "2026-01-02" and js["end"] == "2026-01-02", s
+    print("fetch_gie tests passed")
 
 
 if __name__ == "__main__":
