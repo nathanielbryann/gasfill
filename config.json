@@ -1,0 +1,14 @@
+{
+  "fetch_from": "2016-01-01",
+  "display_from": "2021-01-01",
+  "refresh_days": 60,
+  "ttf_url": "https://nathanielbryann.github.io/spotrank/data/fuel_prices.json",
+  "countries": [
+    {"code": "EU", "name": "EU", "agsi": {"type": "eu"}, "eu_target": true, "aggregate": true},
+    {"code": "DE", "name": "Germany", "agsi": {"country": "DE"}, "eu_target": true},
+    {"code": "NL", "name": "Netherlands", "agsi": {"country": "NL"}, "eu_target": true},
+    {"code": "IT", "name": "Italy", "agsi": {"country": "IT"}, "eu_target": true},
+    {"code": "FR", "name": "France", "agsi": {"country": "FR"}, "eu_target": true},
+    {"code": "GB", "name": "United Kingdom", "agsi": {"country": "GB"}, "eu_target": false}
+  ]
+}

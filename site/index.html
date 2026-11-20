@@ -1,0 +1,901 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gasfill · European gas storage</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* Spotrank's look: same tokens, fonts, panels, segmented switches and map. */
+:root {
+  --bg: #edf0f3; --surface: #ffffff; --surface-2: #f5f7f9; --ink: #0f1722; --ink-2: #4b5664; --muted: #7b8694;
+  --line: #d8dee5; --line-strong: #b9c2cc; --accent: #2443c8; --accent-ink: #ffffff; --accent-soft: #e4e9fb;
+  --shadow: 0 1px 2px rgba(15,23,34,.06), 0 4px 14px rgba(15,23,34,.06);
+  --map-land: #e3e8ed;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
+  --inj: #2a78d6; --wdr: #e34948; --ttf: #e8833a; --band: rgba(123,134,148,.20); --window: rgba(36,67,200,.07);
+  /* fill %: one blue ramp, light = emptier, dark = fuller */
+  --q0: #cde2fb; --q1: #b7d3f6; --q2: #9ec5f4; --q3: #86b6ef; --q4: #6da7ec; --q5: #5598e7; --q6: #3987e5; --q7: #2a78d6; --q8: #1c5cab; --q9: #104281;
+  /* vs 5-year average: red below, blue above, grey about normal */
+  --d1: #781e1f; --d2: #b43b3a; --d3: #e06e68; --d4: #f3ada7; --d5: #b4bac2; --d6: #9ec5f4; --d7: #5598e7; --d8: #256abf; --d9: #104281;
+  --f-display: "Big Shoulders Display", "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+  --f-body: "Instrument Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0b1016; --surface: #131a22; --surface-2: #19222c; --ink: #e8edf2; --ink-2: #aab4bf; --muted: #7d8895;
+    --line: #25303b; --line-strong: #3a4653; --accent: #8399ff; --accent-ink: #0b1016; --accent-soft: #1d2645;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35); --map-land: #222c37;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #0ca30c; --s7: #9085e9; --s8: #e66767;
+    --inj: #3987e5; --wdr: #e66767; --ttf: #d98a3a; --band: rgba(170,180,191,.16); --window: rgba(131,153,255,.10);
+    --q0: #0d366b; --q1: #104281; --q2: #184f95; --q3: #1c5cab; --q4: #256abf; --q5: #2a78d6; --q6: #3987e5; --q7: #5598e7; --q8: #86b6ef; --q9: #b7d3f6;
+    --d1: #f6c2bd; --d2: #e7837c; --d3: #da5450; --d4: #a1302f; --d5: #5f6a77; --d6: #1c5cab; --d7: #3987e5; --d8: #6da7ec; --d9: #b7d3f6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0b1016; --surface: #131a22; --surface-2: #19222c; --ink: #e8edf2; --ink-2: #aab4bf; --muted: #7d8895;
+  --line: #25303b; --line-strong: #3a4653; --accent: #8399ff; --accent-ink: #0b1016; --accent-soft: #1d2645;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35); --map-land: #222c37;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #0ca30c; --s7: #9085e9; --s8: #e66767;
+  --inj: #3987e5; --wdr: #e66767; --ttf: #d98a3a; --band: rgba(170,180,191,.16); --window: rgba(131,153,255,.10);
+  --q0: #0d366b; --q1: #104281; --q2: #184f95; --q3: #1c5cab; --q4: #256abf; --q5: #2a78d6; --q6: #3987e5; --q7: #5598e7; --q8: #86b6ef; --q9: #b7d3f6;
+  --d1: #f6c2bd; --d2: #e7837c; --d3: #da5450; --d4: #a1302f; --d5: #5f6a77; --d6: #1c5cab; --d7: #3987e5; --d8: #6da7ec; --d9: #b7d3f6;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+a { color: var(--accent); }
+.wrap { max-width: 1060px; margin: 0 auto; padding: 20px 20px 48px; display: grid; gap: 20px; }
+
+/* Header */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; }
+.brand { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.wordmark { font-family: var(--f-display); font-weight: 800; font-size: 52px; line-height: .86; letter-spacing: .01em; text-transform: uppercase; margin: 0; }
+.wordmark .unit { font-family: var(--f-mono); font-size: 13px; font-weight: 700; letter-spacing: 0; color: var(--accent); vertical-align: top; margin-left: 4px; text-transform: none; }
+.tag { color: var(--ink-2); font-size: 14px; max-width: 34ch; line-height: 1.3; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { appearance: none; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 7px 14px; font-weight: 600; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; }
+.btn:hover { border-color: var(--ink-2); }
+.btn.sm { padding: 4px 11px; font-size: 13px; min-height: 30px; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+.chip b { color: var(--ink); font-weight: 600; }
+.chip.day { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip.day b { color: var(--bg); }
+.chip.warn { border-style: dashed; border-color: var(--line-strong); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; box-shadow: var(--shadow); min-width: 0; }
+.panel h2 { font-family: var(--f-display); font-weight: 800; text-transform: uppercase; letter-spacing: .03em; font-size: 22px; line-height: 1; margin: 0 0 12px; }
+.panel h2 .sub { font-family: var(--f-body); text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 13px; color: var(--muted); margin-left: 6px; }
+.ph-h3 { font-family: var(--f-display); font-weight: 800; text-transform: uppercase; font-size: 18px; letter-spacing: .03em; margin: 18px 0 6px; }
+.ph-h3 span { font-family: var(--f-body); text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 13px; color: var(--muted); margin-left: 6px; }
+.sub-p { margin: 0; font-size: 13.5px; color: var(--ink-2); max-width: 80ch; }
+
+/* Headline tiles */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0 0 16px; }
+.kpi { border: 1px solid var(--line); background: var(--surface-2); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.kpi .l { display: block; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.kpi .v { display: block; font-family: var(--f-mono); font-weight: 700; font-size: 24px; line-height: 1.2; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.kpi .v small { font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 2px; }
+.kpi .s { display: block; font-size: 12.5px; color: var(--ink-2); line-height: 1.3; margin-top: 2px; }
+
+/* Controls */
+.ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 4px 0 10px; }
+.ctrl .push { margin-left: auto; }
+.seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface-2); }
+.seg button { appearance: none; border: 0; background: transparent; padding: 6px 14px; border-radius: 999px; font-weight: 600; font-size: 13.5px; color: var(--ink-2); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(15,23,34,.15); }
+.seg-sm button { padding: 4px 11px; font-size: 12.5px; }
+.stepper { display: inline-flex; align-items: center; gap: 4px; }
+.stepper button { appearance: none; width: 32px; height: 32px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); cursor: pointer; font-weight: 700; color: var(--ink-2); }
+.stepper button:hover { color: var(--ink); border-color: var(--ink-2); }
+input[type="date"] { font-family: var(--f-mono); font-size: 13px; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
+.slider { width: 100%; margin: 2px 0 0; accent-color: var(--accent); }
+.slider-ticks { position: relative; height: 16px; font-family: var(--f-mono); font-size: 11px; color: var(--muted); margin: 0 8px 6px; }
+.slider-ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.presets button { appearance: none; border: 1px solid var(--line-strong); background: var(--surface); border-radius: 999px; padding: 5px 11px; font-size: 13px; font-weight: 600; color: var(--ink-2); cursor: pointer; }
+.presets button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.dates { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); flex-wrap: wrap; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.zp { appearance: none; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line-strong); background: var(--surface); border-radius: 8px; padding: 4px 9px; font-family: var(--f-mono); font-size: 12.5px; font-weight: 700; color: var(--ink-2); cursor: pointer; }
+.zp i { width: 8px; height: 8px; border-radius: 50%; background: transparent; border: 1.5px solid var(--line-strong); }
+.zp[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); }
+.zp[aria-pressed="true"] i { border: 0; }
+.zp.cur[aria-pressed="true"] i { width: 14px; height: 3px; border-radius: 2px; }
+.lbl { font-size: 12.5px; color: var(--muted); font-weight: 600; min-width: 64px; }
+
+/* Map and ranking */
+.map-wrap { position: relative; max-width: 760px; margin: 0 auto; }
+.map-wrap svg { display: block; width: 100%; height: auto; }
+.map-wrap .zone { cursor: pointer; }
+.map-wrap .zone:hover { opacity: .85; }
+.map-msg { padding: 60px 0; text-align: center; color: var(--muted); margin: 0; }
+.legend-scale { display: flex; gap: 3px; max-width: 860px; margin: 12px auto 0; }
+.legend-scale .sw { flex: 1 1 0; min-width: 0; }
+.legend-scale .sw i { display: block; height: 10px; }
+.legend-scale .sw:first-child i { border-radius: 3px 0 0 3px; }
+.legend-scale .sw:last-child i { border-radius: 0 3px 3px 0; }
+.legend-scale .sw span { display: block; margin-top: 4px; font-family: var(--f-mono); font-size: 11px; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.map-note { max-width: 860px; margin: 8px auto 0; font-size: 12px; color: var(--muted); }
+.rank-wrap { position: relative; }
+.rank-wrap svg { display: block; width: 100%; }
+.rank-wrap .row { cursor: pointer; }
+.rank-wrap .row:hover rect.hov { fill: var(--surface-2); }
+
+/* Charts */
+.chart-wrap { position: relative; }
+.chart-wrap svg { display: block; }
+.chart-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px 16px; }
+svg text { font-family: var(--f-mono); }
+.key { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--ink-2); margin: 6px 0 4px; }
+.key span { display: inline-flex; align-items: center; gap: 6px; }
+.key i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; background: var(--ink); }
+.key i.box { height: 10px; border-radius: 3px; }
+.key i.dash { background: repeating-linear-gradient(90deg, var(--ink-2) 0 4px, transparent 4px 7px); }
+.key i.tgt { background: repeating-linear-gradient(90deg, var(--accent) 0 6px, transparent 6px 9px); }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); border-radius: 8px; padding: 7px 10px; font-size: 12.5px; line-height: 1.4; white-space: nowrap; box-shadow: var(--shadow); transform: translate(-50%, -100%); display: none; z-index: 3; }
+.tip b { font-family: var(--f-mono); }
+.tip .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+.tip .mut { opacity: .7; }
+
+/* Tables */
+.tbl-scroll { overflow-x: auto; margin-top: 4px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-weight: 600; color: var(--ink-2); font-size: 12.5px; vertical-align: bottom; white-space: normal; line-height: 1.25; }
+table th.num { font-family: var(--f-body); }
+th small { display: block; font-weight: 500; color: var(--muted); font-size: 11px; }
+td.num, th.num { text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+#ctable tbody tr { cursor: pointer; }
+#ctable tbody tr:hover td { background: var(--surface-2); }
+tr.agg td { font-weight: 700; }
+tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.est { font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+.foot { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+
+/* Method */
+.data p, .data li { font-size: 13.5px; color: var(--ink-2); max-width: 84ch; overflow-wrap: anywhere; }
+.data ul { margin: 6px 0; padding-left: 20px; }
+.data b { color: var(--ink); }
+.data code { font-family: var(--f-mono); font-size: 12.5px; background: var(--surface-2); border: 1px solid var(--line); padding: 1px 5px; border-radius: 5px; }
+.empty { padding: 30px; text-align: center; }
+.empty p { color: var(--ink-2); margin: 6px auto; max-width: 60ch; }
+@media (max-width: 560px) { .legend-scale .sw span { font-size: 9.5px; white-space: normal; line-height: 1.15; } .wordmark { font-size: 42px; } .seg button { padding: 6px 10px; font-size: 13px; } .lbl { min-width: 0; width: 100%; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1 class="wordmark">Gasfill<span class="unit">% full</span></h1>
+      <span class="tag">European gas storage, day by day since 2021. Data: GIE AGSI+.</span>
+    </div>
+    <div class="actions">
+      <button class="btn sm" id="theme-btn" type="button" title="Switch light / dark">Theme: auto</button>
+    </div>
+  </header>
+  <div class="meta" id="meta"></div>
+
+  <section class="panel empty" id="no-data" hidden>
+    <h2>No storage data yet</h2>
+    <p>Add the <b>AGSI_API_KEY</b> secret, then run <b>Update storage data and deploy</b> in the Actions tab with “Fetch everything again” ticked. The README has the steps.</p>
+  </section>
+
+  <section class="panel" id="snap" hidden>
+    <div class="chart-head"><h2>Storage on <span id="snap-title"></span></h2></div>
+    <div class="kpis" id="kpis"></div>
+    <div class="ctrl">
+      <div class="stepper">
+        <button type="button" id="d-prev" aria-label="Previous day">‹</button>
+        <input type="date" id="d-input" aria-label="Gas day">
+        <button type="button" id="d-next" aria-label="Next day">›</button>
+      </div>
+      <button class="btn sm" type="button" id="d-play">▶ Play</button>
+      <button class="btn sm" type="button" id="d-latest">Latest</button>
+      <div class="seg seg-sm" id="m-metric" role="group" aria-label="Measure">
+        <button type="button" data-v="full">Fill %</button><button type="button" data-v="diff">vs 5-yr avg</button>
+      </div>
+      <div class="seg seg-sm push" id="m-how" role="group" aria-label="View">
+        <button type="button" data-v="map">Map</button><button type="button" data-v="rank">Ranking</button>
+      </div>
+    </div>
+    <input class="slider" type="range" id="d-slider" min="0" max="1" value="1" aria-label="Gas day slider">
+    <div class="slider-ticks" id="d-ticks"></div>
+    <div class="map-wrap" id="map"></div>
+    <div class="rank-wrap" id="rank" hidden></div>
+    <div class="legend-scale" id="map-legend"></div>
+    <p class="map-note" id="map-note"></p>
+  </section>
+
+  <section class="panel" id="tbl" hidden>
+    <h2>Countries <span class="sub" id="tbl-sub"></span></h2>
+    <div class="tbl-scroll"><table id="ctable"><thead></thead><tbody></tbody></table></div>
+    <div class="foot"><button class="btn sm" type="button" id="dl-snap">Download CSV</button><span>Click a row to open its seasonal curve and history.</span></div>
+  </section>
+
+  <section class="panel" id="season" hidden>
+    <div class="chart-head"><h2>Seasonal curve <span class="sub" id="season-sub"></span></h2></div>
+    <div class="ctrl">
+      <span class="lbl">Country</span><div class="chips" id="c-chips"></div>
+    </div>
+    <div class="ctrl">
+      <span class="lbl">Years</span><div class="chips" id="y-chips"></div>
+    </div>
+    <div class="ctrl">
+      <div class="seg seg-sm" id="s-metric" role="group" aria-label="Measure"><button type="button" data-v="full">Fill %</button><button type="button" data-v="gas">TWh</button></div>
+      <div class="seg seg-sm" id="s-axis" role="group" aria-label="Year runs"><button type="button" data-v="cal">Jan–Dec</button><button type="button" data-v="gy">Apr–Mar</button></div>
+    </div>
+    <div class="key" id="s-key"></div>
+    <div class="chart-wrap" id="s-chart"></div>
+    <div class="foot"><button class="btn sm" type="button" id="dl-season">Download CSV</button><span id="s-foot"></span></div>
+  </section>
+
+  <section class="panel" id="hist" hidden>
+    <div class="chart-head"><h2>History <span class="sub" id="hist-sub"></span></h2></div>
+    <div class="ctrl" style="justify-content:space-between">
+      <div class="presets" id="h-presets">
+        <button type="button" data-v="3m">3M</button><button type="button" data-v="6m">6M</button><button type="button" data-v="1y">1Y</button><button type="button" data-v="2y">2Y</button><button type="button" data-v="all">Since 2021</button>
+      </div>
+      <div class="dates"><input type="date" id="h-from" aria-label="From"> to <input type="date" id="h-to" aria-label="To"></div>
+    </div>
+    <h3 class="ph-h3">Fill level <span id="h-fill-sub"></span></h3>
+    <div class="key" id="h-fill-key"></div>
+    <div class="chart-wrap" id="h-fill"></div>
+    <h3 class="ph-h3">Net injection / withdrawal <span id="h-flow-sub"></span></h3>
+    <div class="key" id="h-flow-key"></div>
+    <div class="chart-wrap" id="h-flow"></div>
+    <h3 class="ph-h3">TTF <span id="h-ttf-sub"></span></h3>
+    <div class="chart-wrap" id="h-ttf"></div>
+    <div class="foot"><button class="btn sm" type="button" id="dl-hist">Download CSV</button><span>Hover any chart to read all three on the same day.</span></div>
+  </section>
+
+  <section class="panel data" id="method">
+    <h2>Method and sources</h2>
+    <ul>
+      <li><b>Storage data:</b> <a href="https://agsi.gie.eu" target="_blank" rel="noopener">GIE AGSI+</a> (Gas Infrastructure Europe), country and EU totals through the AGSI+ API, refreshed daily. Each gas day shows the stock at the end of that day. AGSI+ publishes at 19:30 CET with a second run at 23:00 for late reporters; each update re-reads the last 60 days, because operators correct recent days. Days marked <span class="est">e</span> are still <i>estimated</i> by the operator (status E), the rest are confirmed (C). Field definitions: <a href="https://agsi.gie.eu/data-definition" target="_blank" rel="noopener">AGSI+ data definitions</a>.</li>
+      <li><b>Fill %:</b> gas in storage as a share of working gas volume (AGSI+ “full”). <b>TWh</b> is gas in storage; capacity is the working gas volume.</li>
+      <li><b>5-year average and range:</b> the same calendar day in the five previous years (29 February uses 28 February), so 2026 is compared with 2021–2025 and a day in 2021 with 2016–2020. The range is the lowest and highest of those five. Shown only when at least three of the five years have data.</li>
+      <li><b>Net flow:</b> injection minus withdrawal, GWh per day; positive means the country is filling. Long periods are shown as weekly or monthly averages.</li>
+      <li><b>% of annual consumption:</b> AGSI+ “consumption full”, gas in storage against the country's reference annual consumption. <b>≈ days of consumption</b> = that share × 365, i.e. days of <i>average</i> demand (winter demand is higher).</li>
+      <li><b>Filling target:</b> under <a href="https://eur-lex.europa.eu/eli/reg/2025/1733/oj" target="_blank" rel="noopener">Regulation (EU) 2025/1733</a>, EU countries with storage must reach 90% at any point between 1 October and 1 December, with room to deviate in difficult market conditions; the rules run until the end of 2027. The chart draws that line and window for EU countries and the EU total, not for the UK. Earlier years had a fixed date under <a href="https://eur-lex.europa.eu/eli/reg/2022/1032/oj" target="_blank" rel="noopener">Regulation (EU) 2022/1032</a>: 80% by 1 November 2022, 90% by 1 November in 2023–2025.</li>
+      <li><b>TTF:</b> <span id="ttf-src">TTF spot, EUR/MWh</span>.</li>
+      <li><b>Map:</b> borders from entsoe-py (MIT) and Natural Earth (public domain). Grey countries aren't tracked yet.</li>
+    </ul>
+    <p id="gen-note"></p>
+  </section>
+</div>
+
+<script>
+'use strict';
+/* ---------- small helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const lsGet = (k, d) => { try { const v = localStorage.getItem('gasfill-' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem('gasfill-' + k, JSON.stringify(v)); } catch (e) { /* private mode */ } };
+const DAY = 86400000;
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const toT = s => Date.parse(s + 'T00:00:00Z');
+const iso = t => new Date(t).toISOString().slice(0, 10);
+const addDays = (s, n) => iso(toT(s) + n * DAY);
+const daysBetween = (a, b) => Math.round((toT(b) - toT(a)) / DAY);
+const fmtDay = s => +s.slice(8, 10) + ' ' + MON[+s.slice(5, 7) - 1] + ' ' + s.slice(0, 4);
+const fmtDM = s => +s.slice(8, 10) + ' ' + MON[+s.slice(5, 7) - 1];
+const ok = v => v !== null && v !== undefined && isFinite(v);
+const fmtN = (v, d = 1) => ok(v) ? (v < 0 ? '−' : '') + Math.abs(v).toLocaleString('en-GB', {minimumFractionDigits: d, maximumFractionDigits: d}) : '–';
+const fmtS = (v, d = 1) => ok(v) ? (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v).toLocaleString('en-GB', {minimumFractionDigits: d, maximumFractionDigits: d}) : '–';
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+function niceStep(range, target) {
+  const raw = range / Math.max(1, target), p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p;
+}
+function inkFor(hex) {   // white or near-black text on a fill
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim()); if (!m) return '#0f1722';
+  const n = parseInt(m[1], 16), c = [n >> 16, (n >> 8) & 255, n & 255].map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] > 0.3 ? '#0f1722' : '#ffffff';
+}
+function segInit(id, value, onPick) {
+  const el = $(id);
+  const paint = v => el.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === v ? 'true' : 'false'));
+  paint(value);
+  el.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; paint(b.dataset.v); onPick(b.dataset.v); });
+  return paint;
+}
+
+/* ---------- data ---------- */
+let S = null, TTF = null, MAPD = null, CO = [], CM = {};
+function val(code, key, d) {
+  const s = S.series[code]; if (!s || !s[key]) return null;
+  const i = daysBetween(S.start, d);
+  return i >= 0 && i < s[key].length ? s[key][i] : null;
+}
+function stat(code, d) { const s = S.series[code]; const i = daysBetween(S.start, d); return s && s.status && i >= 0 ? s.status[i] || '-' : '-'; }
+function net(code, d) { const a = val(code, 'inj', d), b = val(code, 'wdr', d); return !ok(a) && !ok(b) ? null : (a || 0) - (b || 0); }
+function ttf(d) { if (!TTF) return null; const i = daysBetween(TTF.start, d); return i >= 0 && i < TTF.ttf.length ? TTF.ttf[i] : null; }
+function mean(fn, d, n) { let s = 0, k = 0; for (let j = 0; j < n; j++) { const v = fn(addDays(d, -j)); if (ok(v)) { s += v; k++; } } return k ? s / k : null; }
+function yearsAgo(d, k) { let md = d.slice(5); if (md === '02-29') md = '02-28'; return (+d.slice(0, 4) - k) + '-' + md; }
+function base5(code, key, d) {
+  const xs = [];
+  for (let k = 1; k <= 5; k++) { const v = val(code, key, yearsAgo(d, k)); if (ok(v)) xs.push(v); }
+  if (xs.length < 3) return null;
+  return {avg: xs.reduce((a, b) => a + b, 0) / xs.length, min: Math.min(...xs), max: Math.max(...xs), n: xs.length};
+}
+const isTarget = code => !!(CM[code] && CM[code].eu_target);
+const cname = code => CM[code] ? (CM[code].aggregate ? 'EU total' : CM[code].name) : code;
+function lastWith(code, key, d) { for (let j = 0; j < 40; j++) { const dd = addDays(d, -j); if (ok(val(code, key, dd))) return dd; } return null; }
+
+/* ---------- theme ---------- */
+const THEMES = ['auto', 'light', 'dark'];
+let theme = lsGet('theme', 'auto');
+function applyTheme() {
+  if (theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', theme);
+  $('#theme-btn').textContent = 'Theme: ' + theme;
+}
+$('#theme-btn').addEventListener('click', () => { theme = THEMES[(THEMES.indexOf(theme) + 1) % 3]; lsSet('theme', theme); applyTheme(); renderAll(); });
+applyTheme();
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (theme === 'auto') renderAll(); });
+
+/* ---------- a line / band / bar chart in SVG (Spotrank's drawLines, extended) ---------- */
+function plot(box, o) {
+  const W = Math.max(300, box.clientWidth || 640), H = o.H || (W < 520 ? 210 : 270);
+  const padL = 50, padR = o.padR || 16, padT = 20, padB = 26;
+  const n = Math.max(2, o.n), iw = W - padL - padR, ih = H - padT - padB;
+  const x = i => padL + i / (n - 1) * iw;
+  let lo = Infinity, hi = -Infinity;
+  const take = v => { if (ok(v)) { if (v < lo) lo = v; if (v > hi) hi = v; } };
+  (o.series || []).forEach(s => s.vals.forEach(take));
+  if (o.band) { o.band.lo.forEach(take); o.band.hi.forEach(take); }
+  (o.bars || []).forEach(b => take(b.v));
+  (o.refs || []).forEach(r => take(r.v));
+  if (lo === Infinity) { box.innerHTML = '<p class="map-msg" style="padding:30px 0">No data for this selection.</p>'; return null; }
+  if (o.zero) { lo = Math.min(0, lo); hi = Math.max(0, hi); }
+  if (hi - lo < 1e-9) hi = lo + 1;
+  const step = niceStep(hi - lo, H < 220 ? 4 : 5);
+  lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
+  if (o.clamp) { lo = Math.max(o.clamp[0], lo); hi = Math.min(o.clamp[1], hi); }
+  const y = v => padT + (hi - v) / (hi - lo) * ih;
+  let s = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(o.aria || 'Chart') + '">';
+  for (const sh of o.shades || []) {
+    const a = x(sh[0]), b = x(sh[1]);
+    s += '<rect x="' + a.toFixed(1) + '" y="' + padT + '" width="' + Math.max(1, b - a).toFixed(1) + '" height="' + ih + '" fill="var(--window)"/>';
+    if (sh[2]) s += '<text x="' + ((a + b) / 2).toFixed(1) + '" y="' + (padT - 6) + '" text-anchor="middle" font-size="10.5" fill="var(--muted)">' + esc(sh[2]) + '</text>';
+  }
+  const dec = step < 1 ? 1 : 0;
+  for (let t = lo; t <= hi + 1e-9; t += step) {
+    const yy = y(t).toFixed(1);
+    s += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + yy + '" y2="' + yy + '" stroke="' + (Math.abs(t) < 1e-9 && lo < 0 ? 'var(--line-strong)' : 'var(--line)') + '"/>';
+    s += '<text x="' + (padL - 8) + '" y="' + (+yy + 4) + '" text-anchor="end" font-size="11" fill="var(--muted)">' + fmtN(t, dec).replace(/,/g, ' ') + '</text>';
+  }
+  if (o.unit) s += '<text x="' + (padL - 8) + '" y="' + (padT - 7) + '" text-anchor="end" font-size="11" fill="var(--muted)">' + esc(o.unit) + '</text>';
+  { let lastX = -Infinity;
+    for (const [i, lab] of o.xTicks || []) {
+      const tx = x(i), need = lab.length * 6.6 + 10;
+      if (tx - lastX < need || tx > W - padR - need / 2 + 6 || tx < padL - 4) continue;
+      lastX = tx;
+      s += '<line x1="' + tx.toFixed(1) + '" x2="' + tx.toFixed(1) + '" y1="' + (H - padB) + '" y2="' + (H - padB + 4) + '" stroke="var(--line-strong)"/>';
+      s += '<text x="' + tx.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--muted)">' + esc(lab) + '</text>';
+    } }
+  if (o.band) {
+    let up = '', dn = '', segs = [], cur = [];
+    o.band.lo.forEach((v, i) => { const w = o.band.hi[i]; if (ok(v) && ok(w)) cur.push(i); else if (cur.length) { segs.push(cur); cur = []; } });
+    if (cur.length) segs.push(cur);
+    for (const sg of segs) {
+      up = sg.map((i, k) => (k ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(o.band.hi[i]).toFixed(1)).join('');
+      dn = sg.slice().reverse().map(i => 'L' + x(i).toFixed(1) + ',' + y(o.band.lo[i]).toFixed(1)).join('');
+      s += '<path d="' + up + dn + 'Z" fill="var(--band)"/>';
+    }
+  }
+  if (o.bars && o.bars.length) {
+    const y0 = y(0);
+    for (const b of o.bars) {
+      if (!ok(b.v)) continue;
+      const a = x(b.a - 0.5), c = x(b.b + 0.5), w = Math.max(1, c - a - (c - a > 4 ? 1 : 0));
+      const yy = y(b.v), top = Math.min(yy, y0), h = Math.max(0.5, Math.abs(yy - y0));
+      s += '<rect x="' + a.toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" fill="' + (b.v >= 0 ? 'var(--inj)' : 'var(--wdr)') + '"/>';
+    }
+    s += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + y0.toFixed(1) + '" y2="' + y0.toFixed(1) + '" stroke="var(--line-strong)"/>';
+  }
+  for (const r of o.refs || []) {
+    if (r.v < lo || r.v > hi) continue;
+    const yy = y(r.v).toFixed(1);
+    s += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + yy + '" y2="' + yy + '" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="6 3"/>';
+    if (r.label) s += '<text x="' + (W - padR - 4) + '" y="' + (+yy - 5) + '" text-anchor="end" font-size="10.5" fill="var(--accent)">' + esc(r.label) + '</text>';
+  }
+  const ends = [];
+  for (const sr of o.series || []) {
+    let d = '', pen = false, li = -1;
+    sr.vals.forEach((v, i) => { if (!ok(v)) { pen = false; return; } d += (pen ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(v).toFixed(1); pen = true; li = i; });
+    s += '<path d="' + d + '" fill="none" stroke="' + sr.color + '" stroke-width="' + (sr.width || 2) + '"' + (sr.dash ? ' stroke-dasharray="' + sr.dash + '"' : '') + ' stroke-linejoin="round" stroke-linecap="round"/>';
+    if (sr.endLabel && li >= 0) ends.push({x: x(li), y: y(sr.vals[li]), t: sr.endLabel, bold: sr.width > 2});
+  }
+  // direct labels at line ends, nudged apart vertically
+  ends.sort((a, b) => a.y - b.y);
+  for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 12) ends[k].y = ends[k - 1].y + 12;
+  for (const e of ends) s += '<text x="' + (e.x + 6).toFixed(1) + '" y="' + (e.y + 4).toFixed(1) + '" font-size="11" font-weight="' + (e.bold ? 700 : 500) + '" fill="' + (e.bold ? 'var(--ink)' : 'var(--ink-2)') + '" paint-order="stroke" stroke="var(--surface)" stroke-width="3">' + esc(e.t) + '</text>';
+  s += '<line class="xh" x1="0" x2="0" y1="' + padT + '" y2="' + (H - padB) + '" stroke="var(--ink-2)" visibility="hidden" pointer-events="none"/>';
+  s += '<g class="dots" pointer-events="none"></g>';
+  s += '<rect class="hit" x="' + padL + '" y="' + padT + '" width="' + iw + '" height="' + ih + '" fill="transparent"/></svg><div class="tip"></div>';
+  box.innerHTML = s;
+  const hit = box.querySelector('.hit'), xh = box.querySelector('.xh'), tip = box.querySelector('.tip'), dots = box.querySelector('.dots');
+  const api = {
+    show(i, withTip = true) {
+      i = Math.max(0, Math.min(n - 1, i));
+      const xx = x(i);
+      xh.setAttribute('x1', xx); xh.setAttribute('x2', xx); xh.setAttribute('visibility', 'visible');
+      dots.innerHTML = (o.series || []).filter(sr => !sr.noDot && ok(sr.vals[i])).map(sr => '<circle cx="' + xx.toFixed(1) + '" cy="' + y(sr.vals[i]).toFixed(1) + '" r="3.5" fill="' + sr.color + '" stroke="var(--surface)" stroke-width="2"/>').join('');
+      const html = o.tip ? o.tip(i) : '';
+      if (withTip !== false && html) {
+        tip.innerHTML = html; tip.style.display = 'block';
+        const tw = tip.offsetWidth || 160;
+        tip.style.left = Math.min(Math.max(xx, tw / 2 + 4), W - tw / 2 - 4) + 'px'; tip.style.top = (padT + 4) + 'px'; tip.style.transform = 'translate(-50%, 0)';
+      } else tip.style.display = 'none';
+    },
+    hide() { tip.style.display = 'none'; xh.setAttribute('visibility', 'hidden'); dots.innerHTML = ''; },
+  };
+  const near = e => Math.round((e.clientX - box.getBoundingClientRect().left - padL) / iw * (n - 1));
+  hit.addEventListener('pointermove', e => { const i = near(e); if (o.onMove) o.onMove(i); else api.show(i); });
+  hit.addEventListener('pointerleave', () => { if (o.onLeave) o.onLeave(); else api.hide(); });
+  return api;
+}
+const swatch = c => '<span class="sw" style="background:' + c + '"></span>';
+
+/* ---------- CSV (semicolons and decimal commas where the browser uses decimal commas, so Excel opens it in columns) ---------- */
+const CSV_DEC = (1.5).toLocaleString().indexOf(',') >= 0 ? ',' : '.', CSV_SEP = CSV_DEC === ',' ? ';' : ',';
+const csvCell = v => v === null || v === undefined ? '' : typeof v === 'number' ? String(+v.toFixed(4)).replace('.', CSV_DEC) : /[",;\n]/.test(v) ? '"' + String(v).replace(/"/g, '""') + '"' : String(v);
+function saveCSV(name, rows) {
+  const text = '﻿' + rows.map(r => r.map(csvCell).join(CSV_SEP)).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], {type: 'text/csv;charset=utf-8'}));
+  a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+
+/* ---------- state ---------- */
+const ST = {
+  date: null,
+  metric: lsGet('metric', 'full'),
+  how: lsGet('how', 'map'),
+  code: lsGet('code', 'EU'),
+  sKey: lsGet('s-key', 'full'),
+  axis: lsGet('s-axis', 'cal'),
+  years: lsGet('s-years', null),
+  preset: lsGet('h-preset', '1y'),
+  from: null, to: null,
+};
+let FIRST = null, LAST = null;
+
+/* ---------- headline tiles and meta ---------- */
+function renderMeta() {
+  const lasts = CO.map(c => S.series[c.code].last).sort();
+  const behind = CO.filter(c => S.series[c.code].last < LAST).map(c => c.code);
+  let h = '<span class="chip day">Latest gas day <b>' + fmtDay(LAST) + '</b></span>';
+  h += '<span class="chip">Data fetched <b>' + esc((S.meta.generated || '').replace('T', ' ').slice(0, 16)) + ' UTC</b></span>';
+  if (behind.length) h += '<span class="chip warn">Not yet reported for the latest day: <b>' + esc(behind.join(', ')) + '</b></span>';
+  if (lasts.length && TTF) h += '<span class="chip">TTF to <b>' + fmtDay(TTF.end) + '</b></span>';
+  $('#meta').innerHTML = h;
+}
+function renderKpis() {
+  const code = CO.some(c => c.code === 'EU') ? 'EU' : CO[0].code, d = reportedDay(code, ST.date) || ST.date;
+  const f = val(code, 'full', d), g = val(code, 'gas', d), w = val(code, 'wgv', d), b = base5(code, 'full', d);
+  const f7 = val(code, 'full', addDays(d, -7)), nf = mean(dd => net(code, dd), d, 7);
+  const est = stat(code, d) === 'E';
+  const tiles = [
+    [cname(code) + ' storage', fmtN(f, 1) + '<small>%</small>', (est ? 'of capacity · estimated' : 'of working gas volume') + (d !== ST.date ? ' · as of ' + fmtDM(d) : '')],
+    ['Gas in storage', fmtN(g, 0) + '<small>TWh</small>', 'of ' + fmtN(w, 0) + ' TWh capacity'],
+    ['vs 5-year average', (b && ok(f) ? fmtS(f - b.avg, 1) : '–') + '<small>pp</small>', b ? 'average ' + fmtN(b.avg, 1) + '% on this day (range ' + fmtN(b.min, 0) + '–' + fmtN(b.max, 0) + ')' : 'not enough history'],
+    ['Net flow, 7 days', fmtS(nf, 0) + '<small>GWh/d</small>', ok(nf) ? (nf >= 0 ? 'net injection' : 'net withdrawal') + ' · daily average' : ''],
+    ['Change, 7 days', (ok(f) && ok(f7) ? fmtS(f - f7, 1) : '–') + '<small>pp</small>', ok(f7) ? 'from ' + fmtN(f7, 1) + '% on ' + fmtDM(addDays(d, -7)) : ''],
+  ];
+  $('#kpis').innerHTML = tiles.map(([l, v, s]) => '<div class="kpi"><span class="l">' + esc(l) + '</span><span class="v">' + v + '</span><span class="s">' + esc(s) + '</span></div>').join('');
+}
+
+/* ---------- date control ---------- */
+let playTimer = null;
+function setDate(d, opts = {}) {
+  if (d < FIRST) d = FIRST; if (d > LAST) d = LAST;
+  ST.date = d;
+  $('#d-input').value = d;
+  $('#d-slider').value = daysBetween(FIRST, d);
+  $('#snap-title').textContent = fmtDay(d);
+  renderKpis(); renderSnapView(); renderTable();
+  if (!opts.light) renderSeason();
+}
+function initDate() {
+  const sl = $('#d-slider'), inp = $('#d-input');
+  sl.max = daysBetween(FIRST, LAST); inp.min = FIRST; inp.max = LAST;
+  let raf = 0;
+  sl.addEventListener('input', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => setDate(addDays(FIRST, +sl.value), {light: true})); });
+  sl.addEventListener('change', () => renderSeason());
+  inp.addEventListener('change', () => { if (inp.value) setDate(inp.value); });
+  $('#d-prev').addEventListener('click', () => setDate(addDays(ST.date, -1)));
+  $('#d-next').addEventListener('click', () => setDate(addDays(ST.date, 1)));
+  $('#d-latest').addEventListener('click', () => { stopPlay(); setDate(LAST); });
+  $('#d-play').addEventListener('click', () => {
+    if (playTimer) { stopPlay(); return; }
+    if (ST.date >= LAST) setDate(addDays(LAST, -365), {light: true});
+    $('#d-play').textContent = '❚❚ Pause';
+    playTimer = setInterval(() => { if (ST.date >= LAST) { stopPlay(); return; } setDate(addDays(ST.date, 3), {light: true}); }, 90);
+  });
+  const ticks = [];
+  for (let y = +FIRST.slice(0, 4) + (FIRST.slice(5) === '01-01' ? 0 : 1); y <= +LAST.slice(0, 4); y++) {
+    const k = daysBetween(FIRST, y + '-01-01') / Math.max(1, daysBetween(FIRST, LAST));
+    if (k >= 0 && k <= 1) ticks.push('<span style="left:' + (k * 100).toFixed(2) + '%">' + y + '</span>');
+  }
+  $('#d-ticks').innerHTML = ticks.join('');
+}
+function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; } $('#d-play').textContent = '▶ Play'; renderSeason(); }
+
+/* ---------- map and ranking ---------- */
+const FULL_BREAKS = [10, 20, 30, 40, 50, 60, 70, 80, 90];
+const DIFF_BREAKS = [-20, -10, -5, -2, 2, 5, 10, 20];
+const LAG = 3;
+function reportedDay(code, d) {   // d itself, or the latest earlier day (up to LAG days) when a country reports late
+  for (let j = 0; j <= LAG; j++) { const dd = addDays(d, -j); if (ok(val(code, 'full', dd))) return dd; }
+  return null;
+}
+function measureAt(d) {   // code -> {v, full, diff, base, day, lag}
+  const out = {};
+  for (const c of CO) {
+    const dd = reportedDay(c.code, d); if (!dd) continue;
+    const f = val(c.code, 'full', dd), b = base5(c.code, 'full', dd);
+    out[c.code] = {full: f, base: b, diff: b ? f - b.avg : null, day: dd, lag: dd !== d};
+    out[c.code].v = ST.metric === 'full' ? f : out[c.code].diff;
+  }
+  return out;
+}
+function colourOf(v) {
+  if (!ok(v)) return 'var(--map-land)';
+  if (ST.metric === 'full') { let k = FULL_BREAKS.findIndex(b => v < b); if (k < 0) k = 9; return css('--q' + k); }
+  let k = DIFF_BREAKS.findIndex(b => v < b); if (k < 0) k = 8; return css('--d' + (k + 1));
+}
+function legendHtml() {
+  if (ST.metric === 'full') return Array.from({length: 10}, (_, k) => '<div class="sw"><i style="background:' + css('--q' + k) + '"></i><span>' + (k * 10) + (k === 9 ? '–100%' : '') + '</span></div>').join('');
+  const lab = ['below −20', '−20 to −10', '−10 to −5', '−5 to −2', 'within ±2', '+2 to +5', '+5 to +10', '+10 to +20', 'above +20 pp'];
+  return lab.map((t, k) => '<div class="sw"><i style="background:' + css('--d' + (k + 1)) + '"></i><span>' + t + '</span></div>').join('');
+}
+function tipFor(code, d0, m) {
+  const d = m.day, g = val(code, 'gas', d), w = val(code, 'wgv', d), f7 = val(code, 'full', addDays(d, -7));
+  return '<b>' + esc(code) + '</b> ' + esc(cname(code)) + (m.lag ? ' <span class="mut">· latest reported: ' + fmtDM(d) + '</span>' : '') + (stat(code, d) === 'E' ? ' <span class="mut">· estimated</span>' : '') +
+    '<br><b>' + fmtN(m.full, 1) + '%</b> full · ' + fmtN(g, 1) + ' of ' + fmtN(w, 1) + ' TWh' +
+    (m.base ? '<br>5-yr avg ' + fmtN(m.base.avg, 1) + '% · <b>' + fmtS(m.diff, 1) + ' pp</b>' : '') +
+    (ok(f7) ? '<br>7 days ' + fmtS(m.full - f7, 1) + ' pp' : '');
+}
+function renderSnapView() {
+  $('#map').hidden = ST.how !== 'map'; $('#rank').hidden = ST.how !== 'rank';
+  $('#map-legend').innerHTML = legendHtml();
+  if (ST.how === 'map') renderMap(); else renderRank();
+}
+function renderMap() {
+  const box = $('#map');
+  if (!MAPD) { box.innerHTML = '<p class="map-msg">The map couldn\'t be loaded. Switch to Ranking.</p>'; return; }
+  const d = ST.date, M = measureAt(d);
+  const [, , VW, VH] = MAPD.viewBox, cw = box.clientWidth || 800, u = VW / cw, small = cw < 560;
+  let s = '<svg viewBox="0 0 ' + VW + ' ' + VH + '" role="img" aria-label="' + esc('Map of gas storage ' + (ST.metric === 'full' ? 'fill level' : 'against the 5-year average') + ' on ' + fmtDay(d)) + '">';
+  for (const c of MAPD.context) s += '<path d="' + c.d + '" fill="var(--map-land)" stroke="var(--line-strong)" stroke-width="0.6" vector-effect="non-scaling-stroke"/>';
+  for (const [code, g] of Object.entries(MAPD.countries)) {
+    const m = M[code], fill = m && ok(m.v) ? colourOf(m.v) : 'var(--map-land)';
+    s += '<path class="' + (m ? 'zone' : '') + '" data-c="' + code + '" d="' + g.d + '" fill="' + fill + '" stroke="' + (m ? 'var(--surface)' : 'var(--line-strong)') + '" stroke-width="' + (m ? 1 : 0.6) + '" vector-effect="non-scaling-stroke"/>';
+  }
+  for (const [code, g] of Object.entries(MAPD.countries)) {
+    const m = M[code]; if (!m || !ok(m.v)) continue;
+    const ink = inkFor(colourOf(m.v));
+    const txt = ST.metric === 'full' ? fmtN(m.v, 0) + '%' : fmtS(m.v, 1);
+    s += '<g pointer-events="none" font-family="var(--f-mono)" text-anchor="middle" fill="' + ink + '">' +
+      (small ? '' : '<text x="' + g.x + '" y="' + (g.y - 2 * u) + '" font-size="' + (9.5 * u) + '" opacity=".85">' + esc(code) + '</text>') +
+      '<text x="' + g.x + '" y="' + (g.y + (small ? 3 : 9.5) * u) + '" font-size="' + ((small ? 9 : 11) * u) + '" font-weight="700">' + txt + (m.lag ? '*' : stat(code, m.day) === 'E' ? 'ᵉ' : '') + '</text></g>';
+  }
+  s += '</svg><div class="tip" id="maptip"></div>';
+  box.innerHTML = s;
+  const tip = $('#maptip');
+  box.querySelectorAll('.zone').forEach(el => {
+    el.addEventListener('pointermove', e => {
+      const code = el.dataset.c, r = box.getBoundingClientRect();
+      tip.innerHTML = tipFor(code, d, M[code]); tip.style.display = 'block';
+      tip.style.left = Math.min(Math.max(e.clientX - r.left, 120), r.width - 120) + 'px'; tip.style.top = (e.clientY - r.top - 12) + 'px';
+    });
+    el.addEventListener('pointerleave', () => { tip.style.display = 'none'; });
+    el.addEventListener('click', () => selectCountry(el.dataset.c, true));
+  });
+  const eu = M.EU;
+  $('#map-note').textContent = (ST.metric === 'full' ? 'Each country shows its fill level that gas day.' : 'Each country shows its fill level minus its 5-year average for the same day, in percentage points.') +
+    (eu ? ' EU total: ' + (ST.metric === 'full' ? fmtN(eu.full, 1) + '%' : fmtS(eu.diff, 1) + ' pp') + '.' : '') + ' ᵉ = estimated by the operator.' +
+    (Object.values(M).some(m => m.lag) ? ' * = not reported for this day yet; latest reported day shown.' : '') + ' Click a country for its curve and history.';
+}
+function renderRank() {
+  const box = $('#rank'), d = ST.date, M = measureAt(d);
+  const rows = Object.entries(M).filter(([, m]) => ok(m.v)).sort((a, b) => b[1].v - a[1].v);
+  if (!rows.length) { box.innerHTML = '<p class="map-msg">No values for this day.</p>'; return; }
+  const W = Math.max(300, box.clientWidth || 700), rowH = 34, padT = 22, labW = W < 520 ? 92 : 170, valW = 70;
+  const H = padT + rows.length * rowH + 8, x0 = labW, x1 = W - valW;
+  let lo, hi;
+  if (ST.metric === 'full') { lo = 0; hi = 100; } else { const m = Math.max(5, ...rows.map(([, m]) => Math.abs(m.v))); const st = niceStep(m, 2); hi = Math.ceil(m / st) * st; lo = -hi; }
+  const x = v => x0 + (v - lo) / (hi - lo) * (x1 - x0);
+  let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="Ranking of storage by country">';
+  const ticks = ST.metric === 'full' ? [0, 25, 50, 75, 100] : [lo, lo / 2, 0, hi / 2, hi];
+  for (const t of ticks) s += '<line x1="' + x(t) + '" x2="' + x(t) + '" y1="' + (padT - 4) + '" y2="' + (H - 6) + '" stroke="' + (t === 0 ? 'var(--line-strong)' : 'var(--line)') + '"/><text x="' + x(t) + '" y="' + (padT - 8) + '" text-anchor="middle" font-size="11" fill="var(--muted)">' + (ST.metric === 'full' ? t + '%' : fmtS(t, 0)) + '</text>';
+  rows.forEach(([code, m], k) => {
+    const yy = padT + k * rowH, cy = yy + rowH / 2, c = colourOf(m.v), agg = CM[code] && CM[code].aggregate;
+    const a = ST.metric === 'full' ? x(0) : x(Math.min(0, m.v)), b = ST.metric === 'full' ? x(m.v) : x(Math.max(0, m.v));
+    s += '<g class="row" data-c="' + code + '"><rect class="hov" x="0" y="' + yy + '" width="' + W + '" height="' + rowH + '" fill="transparent"/>' +
+      '<text x="0" y="' + (cy + 4) + '" font-size="13" font-weight="' + (agg ? 700 : 500) + '" fill="var(--ink)" font-family="var(--f-body)">' + esc(code) + (W < 520 ? '' : ' · ' + esc(cname(code))) + '</text>' +
+      '<rect x="' + a.toFixed(1) + '" y="' + (cy - 8) + '" width="' + Math.max(1, b - a).toFixed(1) + '" height="16" rx="4" fill="' + c + '"' + (agg ? ' stroke="var(--ink)" stroke-width="1.5"' : '') + '/>';
+    if (ST.metric === 'full' && m.base) s += '<line x1="' + x(m.base.avg).toFixed(1) + '" x2="' + x(m.base.avg).toFixed(1) + '" y1="' + (cy - 12) + '" y2="' + (cy + 12) + '" stroke="var(--ink)" stroke-width="2"/>';
+    s += '<text x="' + (W - 4) + '" y="' + (cy + 4) + '" text-anchor="end" font-size="13" font-weight="700" fill="var(--ink)">' + (ST.metric === 'full' ? fmtN(m.v, 1) + '%' : fmtS(m.v, 1)) + '</text></g>';
+  });
+  if (ST.metric === 'full') s += '<line x1="' + x(90) + '" x2="' + x(90) + '" y1="' + (padT - 4) + '" y2="' + (H - 6) + '" stroke="var(--accent)" stroke-dasharray="6 3"/>';
+  s += '</svg><div class="tip" id="ranktip"></div>';
+  box.innerHTML = s;
+  const tip = $('#ranktip');
+  box.querySelectorAll('.row').forEach(el => {
+    el.addEventListener('pointermove', e => {
+      const code = el.dataset.c, r = box.getBoundingClientRect();
+      tip.innerHTML = tipFor(code, d, M[code]); tip.style.display = 'block';
+      tip.style.left = Math.min(Math.max(e.clientX - r.left, 120), r.width - 120) + 'px'; tip.style.top = (e.clientY - r.top - 10) + 'px';
+    });
+    el.addEventListener('pointerleave', () => { tip.style.display = 'none'; });
+    el.addEventListener('click', () => selectCountry(el.dataset.c, true));
+  });
+  $('#map-note').textContent = (ST.metric === 'full' ? 'Bars: fill level. Black tick: 5-year average for the same day. Dashed line: the 90% filling target (EU countries).' : 'Bars: fill level minus the 5-year average for the same day, percentage points.') + ' The EU total is outlined. Click a row for its curve and history.';
+}
+
+/* ---------- country table ---------- */
+function snapRows(d0) {
+  return CO.map(c => {
+    const code = c.code, dd = reportedDay(code, d0) || d0, d = dd;
+    const f = val(code, 'full', d), b = base5(code, 'full', d), cf = val(code, 'consFull', d);
+    return {code, agg: !!c.aggregate, name: cname(code), day: d, lag: d !== d0, full: f, gas: val(code, 'gas', d), wgv: val(code, 'wgv', d),
+      d7: ok(f) && ok(val(code, 'full', addDays(d, -7))) ? f - val(code, 'full', addDays(d, -7)) : null,
+      d30: ok(f) && ok(val(code, 'full', addDays(d, -30))) ? f - val(code, 'full', addDays(d, -30)) : null,
+      avg: b ? b.avg : null, diff: b && ok(f) ? f - b.avg : null, nf: mean(dd => net(code, dd), d, 7),
+      cf, days: ok(cf) ? cf * 365 / 100 : null, st: stat(code, d)};
+  }).sort((a, b) => (b.agg - a.agg) || ((b.full ?? -1) - (a.full ?? -1)));
+}
+function renderTable() {
+  const d = ST.date, rows = snapRows(d);
+  $('#tbl-sub').textContent = 'gas day ' + fmtDay(d);
+  $('#ctable thead').innerHTML = '<tr><th>Country</th><th class="num">Fill<small>%</small></th><th class="num">In storage<small>TWh</small></th><th class="num">Capacity<small>TWh</small></th>' +
+    '<th class="num">7 days<small>pp</small></th><th class="num">30 days<small>pp</small></th><th class="num">5-yr avg<small>%</small></th><th class="num">vs avg<small>pp</small></th>' +
+    '<th class="num">Net flow<small>7-day avg, GWh/d</small></th><th class="num">Share of<small>annual cons., %</small></th><th class="num">≈ Days<small>avg. demand</small></th></tr>';
+  $('#ctable tbody').innerHTML = rows.map(r => '<tr data-c="' + r.code + '" class="' + (r.agg ? 'agg ' : '') + (r.code === ST.code ? 'sel' : '') + '">' +
+    '<td>' + (r.agg ? esc(r.name) : esc(r.code) + ' · ' + esc(r.name)) + (r.lag ? '<br><span class="est">as of ' + fmtDM(r.day) + '</span>' : '') + '</td>' +
+    '<td class="num">' + fmtN(r.full, 1) + (r.st === 'E' ? '<span class="est">e</span>' : '') + '</td>' +
+    '<td class="num">' + fmtN(r.gas, 1) + '</td><td class="num">' + fmtN(r.wgv, 1) + '</td>' +
+    '<td class="num">' + fmtS(r.d7, 1) + '</td><td class="num">' + fmtS(r.d30, 1) + '</td>' +
+    '<td class="num">' + fmtN(r.avg, 1) + '</td><td class="num">' + fmtS(r.diff, 1) + '</td>' +
+    '<td class="num">' + fmtS(r.nf, 0) + '</td><td class="num">' + fmtN(r.cf, 1) + '</td><td class="num">' + fmtN(r.days, 0) + '</td></tr>').join('');
+  $('#ctable tbody').querySelectorAll('tr').forEach(tr => tr.addEventListener('click', () => selectCountry(tr.dataset.c, true)));
+}
+$('#dl-snap').addEventListener('click', () => {
+  const d = ST.date, rows = snapRows(d);
+  saveCSV('gas-storage-' + d + '.csv', [['gas_day', 'reported_day', 'code', 'country', 'fill_pct', 'gas_in_storage_twh', 'working_gas_volume_twh', 'change_7d_pp', 'change_30d_pp', 'avg_5y_pct', 'vs_avg_5y_pp', 'net_flow_7d_avg_gwh_d', 'pct_of_annual_consumption', 'approx_days_avg_demand', 'status']]
+    .concat(rows.map(r => [d, r.day, r.code, r.name, r.full, r.gas, r.wgv, r.d7, r.d30, r.avg, r.diff, r.nf, r.cf, r.days, r.st])));
+});
+
+/* ---------- seasonal curve ---------- */
+const SD = new Map();
+function seasonDates(Y, mode) {
+  const k = Y + mode; if (SD.has(k)) return SD.get(k);
+  const out = []; let d = mode === 'gy' ? Y + '-04-01' : Y + '-01-01';
+  while (out.length < 365) { if (d.slice(5) !== '02-29') out.push(d); d = addDays(d, 1); }
+  SD.set(k, out); return out;
+}
+const seasonOf = (d, mode) => mode === 'gy' && +d.slice(5, 7) < 4 ? +d.slice(0, 4) - 1 : +d.slice(0, 4);
+const seasonLabel = (Y, mode) => mode === 'gy' ? Y + '/' + String(Y + 1).slice(2) : String(Y);
+const yearColour = Y => 'var(--s' + (((Y - 2021) % 8 + 8) % 8 + 1) + ')';
+function seasonYears() {
+  const first = +S.meta.display_from.slice(0, 4), last = seasonOf(LAST, ST.axis), ys = [];
+  for (let y = first; y <= last; y++) ys.push(y);
+  return ys;
+}
+function renderChips() {
+  $('#c-chips').innerHTML = CO.map(c => '<button type="button" class="zp" data-c="' + c.code + '" aria-pressed="' + (c.code === ST.code) + '"><i style="background:var(--ink)"></i>' + esc(c.code) + '</button>').join('');
+  $('#c-chips').querySelectorAll('.zp').forEach(b => b.addEventListener('click', () => selectCountry(b.dataset.c, false)));
+}
+function renderYearChips() {
+  const ys = seasonYears(), F = ys[ys.length - 1];
+  if (!ST.years) ST.years = [F - 1];
+  $('#y-chips').innerHTML = ys.map(Y => {
+    const on = Y === F || ST.years.includes(Y);
+    return '<button type="button" class="zp' + (Y === F ? ' cur' : '') + '" data-y="' + Y + '" aria-pressed="' + on + '"' + (Y === F ? ' title="The latest year is always shown"' : '') + '><i style="background:' + (Y === F ? 'var(--ink)' : yearColour(Y)) + '"></i>' + seasonLabel(Y, ST.axis) + '</button>';
+  }).join('') + '<button type="button" class="zp" data-y="all" aria-pressed="false">All</button><button type="button" class="zp" data-y="none" aria-pressed="false">Latest only</button>';
+  $('#y-chips').querySelectorAll('.zp').forEach(b => b.addEventListener('click', () => {
+    const v = b.dataset.y;
+    if (v === 'all') ST.years = ys.slice(); else if (v === 'none') ST.years = [];
+    else { const Y = +v; if (Y === F) return; ST.years = ST.years.includes(Y) ? ST.years.filter(y => y !== Y) : ST.years.concat(Y); }
+    lsSet('s-years', ST.years); renderSeason();
+  }));
+}
+function seasonData() {
+  const code = ST.code, key = ST.sKey, mode = ST.axis, ys = seasonYears(), F = ys[ys.length - 1];
+  const lines = ys.map(Y => ({Y, vals: seasonDates(Y, mode).map(d => d > LAST ? null : val(code, key, d))}));
+  const lo = [], hi = [], av = [];
+  for (let i = 0; i < 365; i++) {
+    const xs = [];
+    for (let k = 1; k <= 5; k++) { const v = val(code, key, seasonDates(F - k, mode)[i]); if (ok(v)) xs.push(v); }
+    if (xs.length >= 3) { lo.push(Math.min(...xs)); hi.push(Math.max(...xs)); av.push(xs.reduce((a, b) => a + b, 0) / xs.length); } else { lo.push(null); hi.push(null); av.push(null); }
+  }
+  return {code, key, mode, ys, F, lines, lo, hi, av};
+}
+function renderSeason() {
+  if (!S) return;
+  renderYearChips();
+  const D = seasonData(), {code, key, mode, F} = D, dates = seasonDates(F, mode);
+  const unit = key === 'full' ? '%' : 'TWh', dec = key === 'full' ? 1 : 1;
+  $('#season-sub').textContent = cname(code) + ' · ' + (key === 'full' ? 'fill level, % of working gas volume' : 'gas in storage, TWh') + ' · range = ' + seasonLabel(F - 5, mode) + ' to ' + seasonLabel(F - 1, mode);
+  const shown = D.lines.filter(l => l.Y === F || ST.years.includes(l.Y)).sort((a, b) => a.Y - b.Y);
+  const series = [{name: '5-yr avg', vals: D.av, color: 'var(--ink-2)', width: 1.5, dash: '5 4', noDot: true}];
+  for (const l of shown) if (l.Y !== F) series.push({name: seasonLabel(l.Y, mode), vals: l.vals, color: yearColour(l.Y), width: 1.75, endLabel: seasonLabel(l.Y, mode)});
+  const cur = shown.find(l => l.Y === F);
+  series.push({name: seasonLabel(F, mode), vals: cur.vals, color: 'var(--ink)', width: 3, endLabel: seasonLabel(F, mode)});
+  const refs = [], shades = [];
+  const tgt = isTarget(code);
+  if (tgt) {
+    const a = dates.findIndex(d => d.slice(5) === '10-01'), b = dates.findIndex(d => d.slice(5) === '12-01');
+    if (a >= 0 && b >= 0) shades.push([a, b, '1 Oct–1 Dec']);
+    if (key === 'full') refs.push({v: 90, label: '90% target'});
+    else { const w = val(code, 'wgv', lastWith(code, 'wgv', LAST) || LAST); if (ok(w)) refs.push({v: 0.9 * w, label: '90% of capacity'}); }
+  }
+  const ticks = dates.map((d, i) => d.slice(8) === '01' ? [i, MON[+d.slice(5, 7) - 1]] : null).filter(Boolean);
+  $('#s-key').innerHTML = '<span><i style="background:var(--ink);height:4px"></i>' + seasonLabel(F, mode) + '</span><span><i class="box" style="background:var(--band)"></i>5-year range</span><span><i class="dash"></i>5-year average</span>' +
+    (tgt ? '<span><i class="tgt"></i>90% target</span><span><i class="box" style="background:var(--window);border:1px solid var(--line)"></i>1 Oct–1 Dec window</span>' : '');
+  plot($('#s-chart'), {
+    n: 365, series, band: {lo: D.lo, hi: D.hi}, refs, shades, xTicks: ticks, unit, padR: 52, clamp: key === 'full' ? [0, 100] : null,
+    H: ($('#s-chart').clientWidth || 600) < 520 ? 240 : 320, zero: key !== 'full' ? false : false,
+    aria: 'Seasonal curve of ' + cname(code) + ' gas storage',
+    tip: i => {
+      const md = fmtDM(dates[i]);
+      let h = '<b>' + md + '</b>';
+      for (const l of shown.slice().reverse()) if (ok(l.vals[i])) h += '<br>' + swatch(l.Y === F ? 'var(--ink)' : yearColour(l.Y)) + seasonLabel(l.Y, mode) + ' <b>' + fmtN(l.vals[i], dec) + '</b>';
+      if (ok(D.av[i])) h += '<br><span class="mut">5-yr avg ' + fmtN(D.av[i], dec) + ' · range ' + fmtN(D.lo[i], dec) + '–' + fmtN(D.hi[i], dec) + '</span>';
+      return h;
+    },
+  });
+  const lastV = cur.vals.reduce((a, v, i) => ok(v) ? i : a, -1);
+  $('#s-foot').textContent = lastV >= 0 && ok(D.av[lastV]) ? 'Latest ' + fmtDM(dates[lastV]) + ': ' + fmtN(cur.vals[lastV], 1) + (key === 'full' ? '%' : ' TWh') + ', ' + fmtS(cur.vals[lastV] - D.av[lastV], 1) + (key === 'full' ? ' pp' : ' TWh') + ' against the 5-year average.' : '';
+}
+$('#dl-season').addEventListener('click', () => {
+  const D = seasonData(), dates = seasonDates(D.F, D.mode);
+  const head = ['day_of_year', 'day'].concat(D.ys.map(Y => seasonLabel(Y, D.mode)), ['avg_5y', 'min_5y', 'max_5y']);
+  const rows = dates.map((d, i) => [i + 1, d.slice(5)].concat(D.lines.map(l => l.vals[i]), [D.av[i], D.lo[i], D.hi[i]]));
+  saveCSV('seasonal-' + D.code + '-' + D.key + '-' + D.mode + '.csv', [head].concat(rows));
+});
+
+/* ---------- history: fill, net flow and TTF on one time axis ---------- */
+function presetRange(p) {
+  const to = LAST, from = p === '3m' ? addDays(to, -91) : p === '6m' ? addDays(to, -182) : p === '1y' ? addDays(to, -365) : p === '2y' ? addDays(to, -730) : S.meta.display_from;
+  return [from < FIRST ? FIRST : from, to];
+}
+function paintPresets() { $('#h-presets').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === ST.preset ? 'true' : 'false')); }
+function timeTicks(from, n) {
+  const out = [], yrs = n > 500;
+  for (let i = 0; i < n; i++) {
+    const d = addDays(from, i);
+    if (yrs ? d.slice(5) === '01-01' : d.slice(8) === '01' && (n < 200 || ['01', '04', '07', '10'].includes(d.slice(5, 7)))) out.push([i, yrs ? d.slice(0, 4) : MON[+d.slice(5, 7) - 1] + (d.slice(5, 7) === '01' ? ' ' + d.slice(2, 4) : '')]);
+  }
+  return out;
+}
+function renderHist() {
+  if (!S) return;
+  const code = ST.code, from = ST.from, to = ST.to, n = daysBetween(from, to) + 1;
+  if (n < 2) return;
+  $('#h-from').value = from; $('#h-to').value = to; $('#h-from').min = $('#h-to').min = FIRST; $('#h-from').max = $('#h-to').max = LAST;
+  $('#hist-sub').textContent = cname(code) + ' · ' + fmtDay(from) + ' to ' + fmtDay(to);
+  const days = Array.from({length: n}, (_, i) => addDays(from, i));
+  const fill = days.map(d => val(code, 'full', d)), b5 = days.map(d => base5(code, 'full', d));
+  const avg = b5.map(b => b ? b.avg : null), lo = b5.map(b => b ? b.min : null), hi = b5.map(b => b ? b.max : null);
+  const flow = days.map(d => net(code, d)), tt = days.map(ttf);
+  const res = n <= 400 ? 'daily' : n <= 1500 ? 'weekly average' : 'monthly average';
+  const bars = [];
+  if (res === 'daily') flow.forEach((v, i) => bars.push({a: i, b: i, v}));
+  else {
+    let a = 0;
+    for (let i = 1; i <= n; i++) {
+      const brk = i === n || (res === 'weekly average' ? new Date(toT(days[i])).getUTCDay() === 1 : days[i].slice(8) === '01');
+      if (brk) { const xs = flow.slice(a, i).filter(ok); bars.push({a, b: i - 1, v: xs.length ? xs.reduce((p, q) => p + q, 0) / xs.length : null}); a = i; }
+    }
+  }
+  const barAt = i => bars.find(b => i >= b.a && i <= b.b);
+  const ticks = timeTicks(from, n), tgt = isTarget(code);
+  $('#h-fill-sub').textContent = '% of working gas volume';
+  $('#h-fill-key').innerHTML = '<span><i style="background:var(--s1)"></i>' + esc(cname(code)) + '</span><span><i class="dash"></i>5-year average, same day</span><span><i class="box" style="background:var(--band)"></i>5-year range</span>' + (tgt ? '<span><i class="tgt"></i>90% target</span>' : '');
+  $('#h-flow-sub').textContent = 'GWh/d, ' + res;
+  $('#h-flow-key').innerHTML = '<span><i class="box" style="background:var(--inj)"></i>Net injection</span><span><i class="box" style="background:var(--wdr)"></i>Net withdrawal</span>';
+  $('#h-ttf-sub').textContent = 'EUR/MWh' + (TTF ? ', data to ' + fmtDay(TTF.end) : ', not loaded');
+  const charts = [];
+  const move = i => charts.forEach(c => c && c.show(i));
+  const leave = () => charts.forEach(c => c && c.hide());
+  const head = i => '<b>' + fmtDay(days[Math.max(0, Math.min(n - 1, i))]) + '</b>';
+  const W = $('#h-fill').clientWidth || 600, small = W < 520;
+  charts.push(plot($('#h-fill'), {
+    n, xTicks: ticks, unit: '%', H: small ? 200 : 240, clamp: [0, 100], band: {lo, hi}, refs: tgt ? [{v: 90, label: '90%'}] : [],
+    series: [{name: '5-yr avg', vals: avg, color: 'var(--ink-2)', width: 1.5, dash: '5 4', noDot: true}, {name: cname(code), vals: fill, color: 'var(--s1)', width: 2}],
+    aria: 'Fill level history', onMove: move, onLeave: leave,
+    tip: i => head(i) + '<br>' + swatch('var(--s1)') + 'Fill <b>' + fmtN(fill[i], 1) + '%</b>' + (stat(code, days[i]) === 'E' ? ' <span class="mut">est.</span>' : '') + (ok(avg[i]) ? '<br><span class="mut">5-yr avg ' + fmtN(avg[i], 1) + '% · ' + fmtS(fill[i] - avg[i], 1) + ' pp</span>' : ''),
+  }));
+  charts.push(plot($('#h-flow'), {
+    n, xTicks: ticks, unit: 'GWh/d', H: small ? 150 : 180, zero: true, bars,
+    aria: 'Net injection and withdrawal', onMove: move, onLeave: leave,
+    tip: i => { const b = barAt(i); return head(i) + '<br>' + swatch(b && b.v >= 0 ? 'var(--inj)' : 'var(--wdr)') + (b && b.v >= 0 ? 'Net injection ' : 'Net withdrawal ') + '<b>' + fmtN(b ? Math.abs(b.v) : null, 0) + '</b> GWh/d' + (res !== 'daily' && b ? '<br><span class="mut">' + res + ', ' + fmtDM(days[b.a]) + '–' + fmtDM(days[b.b]) + '</span>' : ''); },
+  }));
+  charts.push(plot($('#h-ttf'), {
+    n, xTicks: ticks, unit: '€/MWh', H: small ? 150 : 180,
+    series: [{name: 'TTF', vals: tt, color: 'var(--ttf)', width: 2}],
+    aria: 'TTF price', onMove: move, onLeave: leave,
+    tip: i => head(i) + '<br>' + swatch('var(--ttf)') + 'TTF <b>' + fmtN(tt[i], 2) + '</b> €/MWh',
+  }));
+}
+function initHist() {
+  [ST.from, ST.to] = presetRange(ST.preset); paintPresets();
+  $('#h-presets').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    ST.preset = b.dataset.v; lsSet('h-preset', ST.preset); [ST.from, ST.to] = presetRange(ST.preset); paintPresets(); renderHist();
+  });
+  const onDates = () => {
+    let f = $('#h-from').value, t = $('#h-to').value; if (!f || !t) return;
+    if (f > t) [f, t] = [t, f];
+    ST.from = f < FIRST ? FIRST : f; ST.to = t > LAST ? LAST : t; ST.preset = null; paintPresets(); renderHist();
+  };
+  $('#h-from').addEventListener('change', onDates); $('#h-to').addEventListener('change', onDates);
+}
+$('#dl-hist').addEventListener('click', () => {
+  const code = ST.code, n = daysBetween(ST.from, ST.to) + 1, rows = [['gas_day', 'code', 'fill_pct', 'gas_in_storage_twh', 'working_gas_volume_twh', 'injection_gwh_d', 'withdrawal_gwh_d', 'net_flow_gwh_d', 'avg_5y_pct', 'min_5y_pct', 'max_5y_pct', 'pct_of_annual_consumption', 'ttf_eur_mwh', 'status']];
+  for (let i = 0; i < n; i++) {
+    const d = addDays(ST.from, i), b = base5(code, 'full', d);
+    rows.push([d, code, val(code, 'full', d), val(code, 'gas', d), val(code, 'wgv', d), val(code, 'inj', d), val(code, 'wdr', d), net(code, d), b ? b.avg : null, b ? b.min : null, b ? b.max : null, val(code, 'consFull', d), ttf(d), stat(code, d)]);
+  }
+  saveCSV('history-' + code + '-' + ST.from + '-' + ST.to + '.csv', rows);
+});
+
+/* ---------- wiring ---------- */
+function selectCountry(code, scroll) {
+  if (!S.series[code]) return;
+  ST.code = code; lsSet('code', code);
+  renderChips(); renderTable(); renderSeason(); renderHist();
+  if (scroll) $('#season').scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+function renderAll() {
+  if (!S) return;
+  renderKpis(); renderSnapView(); renderTable(); renderChips(); renderSeason(); renderHist();
+}
+let rz = 0;
+window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderAll, 150); });
+
+async function getJSON(url, cache) { const r = await fetch(url, {cache}); if (!r.ok) throw new Error(url + ' HTTP ' + r.status); return r.json(); }
+async function boot() {
+  const bust = '?v=' + Math.floor(Date.now() / 600000);   // new data at most every 10 minutes
+  const [st, tf, mp] = await Promise.allSettled([getJSON('data/storage.json' + bust, 'no-cache'), getJSON('data/ttf.json' + bust, 'no-cache'), getJSON('data/countries-map.json?v=1', 'force-cache')]);
+  if (tf.status === 'fulfilled') { TTF = tf.value; $('#ttf-src').textContent = TTF.source + ', ' + TTF.unit + '.'; }
+  if (mp.status === 'fulfilled') MAPD = mp.value;
+  if (st.status !== 'fulfilled' || !st.value.series || !Object.keys(st.value.series).length) { $('#no-data').hidden = false; return; }
+  S = st.value;
+  CO = S.meta.countries.filter(c => S.series[c.code]);
+  CM = Object.fromEntries(CO.map(c => [c.code, c]));
+  if (!S.series[ST.code]) ST.code = CO[0].code;
+  FIRST = S.meta.display_from > S.start ? S.meta.display_from : S.start;
+  LAST = S.end;
+  ['#snap', '#tbl', '#season', '#hist'].forEach(id => { $(id).hidden = false; });
+  $('#gen-note').textContent = 'Data file built ' + (S.meta.generated || '?') + ' from ' + S.meta.source + '; history fetched from ' + S.start + ' so every day since ' + FIRST + ' has five earlier years to compare with.';
+  segInit('#m-metric', ST.metric, v => { ST.metric = v; lsSet('metric', v); renderSnapView(); });
+  segInit('#m-how', ST.how, v => { ST.how = v; lsSet('how', v); renderSnapView(); });
+  segInit('#s-metric', ST.sKey, v => { ST.sKey = v; lsSet('s-key', v); renderSeason(); });
+  segInit('#s-axis', ST.axis, v => { ST.axis = v; lsSet('s-axis', v); ST.years = null; renderSeason(); });
+  renderMeta(); initDate(); initHist(); renderChips();
+  setDate(LAST);
+  renderHist();
+}
+boot().catch(e => { console.error(e); $('#no-data').hidden = false; $('#no-data').querySelector('p').textContent = 'Something went wrong loading the data: ' + e.message; });
+</script>
+</body>
+</html>
