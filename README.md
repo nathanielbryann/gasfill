@@ -1,12 +1,15 @@
 # Gasfill
 
 A one-page view of European gas storage, day by day since 2021: a map and ranking for any gas day,
-a country table, seasonal curves against the 5-year range, and history of fill level, net
-injection/withdrawal and TTF on one time axis. Data: [GIE AGSI+](https://agsi.gie.eu). Same look as
-Spotrank, but no game.
+automatic notes on what stands out, a country table, a winter (or refill) outlook built from past
+years, seasonal curves against the 5-year range, and history of fill level, net
+injection/withdrawal, LNG send-out and TTF on one time axis. Every chart can be saved as a PNG with
+its legend and source line. Data: [GIE AGSI+](https://agsi.gie.eu) and [GIE ALSI](https://alsi.gie.eu).
+Same look as Spotrank, but no game.
 
 - `site/` is the website (GitHub Pages). One file, `site/index.html`, no libraries.
-- `site/data/storage.json` holds the daily AGSI+ data, written by `scripts/fetch_gie.py`.
+- `site/data/storage.json` holds the daily AGSI+ data and `site/data/lng.json` the ALSI LNG data,
+  both written by `scripts/fetch_gie.py` (one script, one API key for both platforms).
 - `site/data/ttf.json` holds TTF, written by `scripts/fetch_ttf.py`.
 - `site/data/countries-map.json` holds the map shapes for every European country (`scripts/build_map.py`, run once).
 - `config.json` lists the countries and dates.
@@ -33,6 +36,7 @@ Spotrank, but no game.
      19:30 CET and runs again at 23:00 CET for late reporters.
 
 To fetch right away without cron-job.org: *Run workflow*, or change `.github/update-now.txt` and commit.
+To fetch everything again from `fetch_from` (both datasets), change `.github/refetch-all.txt` and commit.
 
 **Who can see it:** a GitHub Pages site is public to anyone who has the link, also from a private
 repository (Pages from private repos needs a paid plan). The page has `noindex`, so search engines
@@ -65,11 +69,17 @@ the UK, Ukraine, Serbia).
 
 ## How the data is handled
 
-- **What is fetched:** `https://agsi.gie.eu/api` with the key in an `x-key` header, `type=eu` for
-  the EU total and `country=XX` for a country, `from`/`to` by gas day, 300 rows a page.
+- **What is fetched:** `https://agsi.gie.eu/api` and `https://alsi.gie.eu/api` with the key in an
+  `x-key` header, `type=eu` for the EU total and `country=XX` for a country, `from`/`to` by gas day,
+  300 rows a page, one calendar year per request (a single long request stopped paging early for
+  Germany in the first run).
   Fields kept: gas in storage (TWh), fill % of working gas volume, injection and withdrawal
   (GWh/d), working gas volume (TWh), injection and withdrawal capacity (GWh/d), the country's
-  reference annual consumption (TWh) and storage as % of it, and the E/C status per day.
+  reference annual consumption (TWh) and storage as % of it, and the E/C status per day. From
+  ALSI: LNG in tanks (GWh and 1000 m³ LNG), send-out (GWh/d), declared maximum inventory and
+  reference send-out.
+- **UK:** AGSI+ has no UK data after 30 Dec 2020, so the page hides GB (any country without data
+  in the last 30 days is hidden and listed at the top).
 - **Revisions:** each daily run re-downloads the last 60 days (`refresh_days`), because operators
   correct recent days. AGSI+ marks a day E (estimated) until it is C (confirmed); the page marks
   estimated days.

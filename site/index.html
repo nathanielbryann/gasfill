@@ -166,6 +166,19 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .est { font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
 .foot { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: 10px; font-size: 12.5px; color: var(--muted); }
 
+/* Insights (Spotrank's "why" list) */
+.insights { display: grid; }
+.ins { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+.ins:first-child { border-top: 0; padding-top: 4px; }
+.ins .tag { font-family: var(--f-mono); font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--accent); padding-top: 3px; }
+.ins h4 { margin: 0 0 3px; font-size: 16px; font-weight: 600; line-height: 1.3; text-wrap: balance; }
+.ins p { margin: 0; color: var(--ink-2); font-size: 14px; max-width: 78ch; }
+.ins b.n { font-family: var(--f-mono); color: var(--ink); font-weight: 700; }
+@media (max-width: 520px) { .ins { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+#ol-table tbody tr { cursor: pointer; }
+#ol-table tbody tr:hover td { background: var(--surface-2); }
+.lng-none { color: var(--muted); font-size: 13.5px; margin: 4px 0 0; }
+
 /* Method */
 .data p, .data li { font-size: 13.5px; color: var(--ink-2); max-width: 84ch; overflow-wrap: anywhere; }
 .data ul { margin: 6px 0; padding-left: 20px; }
@@ -218,12 +231,32 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
     <div class="rank-wrap" id="rank" hidden></div>
     <div class="legend-scale" id="map-legend"></div>
     <p class="map-note" id="map-note"></p>
+    <div class="foot"><button class="btn sm" type="button" id="png-snap">Save PNG</button><span>Saves the map or ranking as shown, with its legend and source.</span></div>
+  </section>
+
+  <section class="panel" id="ins-panel" hidden>
+    <h2>What stands out <span class="sub" id="ins-sub"></span></h2>
+    <div class="insights" id="insights"></div>
   </section>
 
   <section class="panel" id="tbl" hidden>
     <h2>Countries <span class="sub" id="tbl-sub"></span></h2>
     <div class="tbl-scroll"><table id="ctable"><thead></thead><tbody></tbody></table></div>
     <div class="foot"><button class="btn sm" type="button" id="dl-snap">Download CSV</button><span>Click a row to open its seasonal curve and history.</span></div>
+  </section>
+
+  <section class="panel" id="outlook" hidden>
+    <div class="chart-head"><h2><span id="ol-title">Winter outlook</span> <span class="sub" id="ol-sub"></span></h2></div>
+    <p class="sub-p" id="ol-intro"></p>
+    <div class="ctrl" style="margin-top:10px">
+      <span class="lbl">Country</span><div class="chips" id="ol-chips"></div>
+      <div class="seg seg-sm push" id="ol-n" role="group" aria-label="Past years used"><button type="button" data-v="5">Last 5 years</button><button type="button" data-v="10">Since 2016</button></div>
+    </div>
+    <div class="key" id="ol-key"></div>
+    <div class="chart-wrap" id="ol-chart"></div>
+    <h3 class="ph-h3" id="ol-t-title">All countries</h3>
+    <div class="tbl-scroll"><table id="ol-table"><thead></thead><tbody></tbody></table></div>
+    <div class="foot"><button class="btn sm" type="button" id="png-ol">Save PNG</button><button class="btn sm" type="button" id="dl-ol">Download CSV</button><span id="ol-foot"></span></div>
   </section>
 
   <section class="panel" id="season" hidden>
@@ -240,7 +273,7 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
     </div>
     <div class="key" id="s-key"></div>
     <div class="chart-wrap" id="s-chart"></div>
-    <div class="foot"><button class="btn sm" type="button" id="dl-season">Download CSV</button><span id="s-foot"></span></div>
+    <div class="foot"><button class="btn sm" type="button" id="png-season">Save PNG</button><button class="btn sm" type="button" id="dl-season">Download CSV</button><span id="s-foot"></span></div>
   </section>
 
   <section class="panel" id="hist" hidden>
@@ -257,9 +290,12 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
     <h3 class="ph-h3">Net injection / withdrawal <span id="h-flow-sub"></span></h3>
     <div class="key" id="h-flow-key"></div>
     <div class="chart-wrap" id="h-flow"></div>
+    <h3 class="ph-h3">LNG send-out <span id="h-lng-sub"></span></h3>
+    <div class="key" id="h-lng-key"></div>
+    <div class="chart-wrap" id="h-lng"></div>
     <h3 class="ph-h3">TTF <span id="h-ttf-sub"></span></h3>
     <div class="chart-wrap" id="h-ttf"></div>
-    <div class="foot"><button class="btn sm" type="button" id="dl-hist">Download CSV</button><span>Hover any chart to read all three on the same day.</span></div>
+    <div class="foot"><button class="btn sm" type="button" id="png-hist">Save PNG</button><button class="btn sm" type="button" id="dl-hist">Download CSV</button><span>Hover any chart to read them all on the same day.</span></div>
   </section>
 
   <section class="panel data" id="method">
@@ -271,6 +307,9 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
       <li><b>Net flow:</b> injection minus withdrawal, GWh per day; positive means the country is filling. Long periods are shown as weekly or monthly averages.</li>
       <li><b>% of annual consumption:</b> AGSI+ “consumption full”, gas in storage against the country's reference annual consumption. <b>≈ days of consumption</b> = that share × 365, i.e. days of <i>average</i> demand (winter demand is higher).</li>
       <li><b>Filling target:</b> under <a href="https://eur-lex.europa.eu/eli/reg/2025/1733/oj" target="_blank" rel="noopener">Regulation (EU) 2025/1733</a>, EU countries with storage must reach 90% at any point between 1 October and 1 December, with room to deviate in difficult market conditions; the rules run until the end of 2027. The chart draws that line and window for EU countries and the EU total, not for the UK. Earlier years had a fixed date under <a href="https://eur-lex.europa.eu/eli/reg/2022/1032/oj" target="_blank" rel="noopener">Regulation (EU) 2022/1032</a>: 80% by 1 November 2022, 90% by 1 November in 2023–2025.</li>
+      <li><b>LNG:</b> <a href="https://alsi.gie.eu" target="_blank" rel="noopener">GIE ALSI</a>, LNG terminals by country: send-out (regasified gas sent into the grid, GWh/d) and LNG in tanks against the declared maximum inventory. Shown as 7-day averages, with the 5-year range of the same 7-day window.</li>
+      <li><b>Winter outlook:</b> starts from the chosen day's fill level and adds, day by day, the change in storage of the same calendar days in each past year (gas in storage change divided by that year's working gas volume, so capacity changes don't distort it), kept between 0% and 100%. Each past year gives one path; the chart shows them all, their median and range. From April to September it becomes a refill outlook to 1 December. It is a what-if on past patterns, not a forecast: it doesn't know this winter's weather, prices or LNG supply, and a nearly empty store can't withdraw as fast as a full one.</li>
+      <li><b>What stands out:</b> automatic notes for the chosen day: records for the calendar day across all years in the data, streaks outside the 5-year range, the fastest 7-day changes for that week of the year, the filling target, the season's peak, TTF and LNG send-out.</li>
       <li><b>TTF:</b> <span id="ttf-src">TTF spot, EUR/MWh</span>.</li>
       <li><b>Map:</b> borders from entsoe-py (MIT) and Natural Earth (public domain). Grey countries aren't tracked yet.</li>
     </ul>
@@ -315,7 +354,19 @@ function segInit(id, value, onPick) {
 }
 
 /* ---------- data ---------- */
-let S = null, TTF = null, MAPD = null, CO = [], CM = {};
+let S = null, TTF = null, MAPD = null, L = null, CO = [], CM = {}, STALE = [], LASTOF = {};
+function lval(code, key, d) {
+  if (!L) return null; const s = L.series[code]; if (!s || !s[key]) return null;
+  const i = daysBetween(L.start, d);
+  return i >= 0 && i < s[key].length ? s[key][i] : null;
+}
+const hasLNG = code => !!(L && L.series[code] && daysBetween(L.series[code].last || L.end, L.end) <= 30);
+function lngAvg7(code, d) { return mean(dd => lval(code, 'sendOut', dd), d, 7); }
+function lngBase(code, d) {   // the same 7-day window in the five previous years
+  const xs = [];
+  for (let k = 1; k <= 5; k++) { const v = lngAvg7(code, yearsAgo(d, k)); if (ok(v)) xs.push(v); }
+  return xs.length >= 3 ? {avg: xs.reduce((a, b) => a + b, 0) / xs.length, min: Math.min(...xs), max: Math.max(...xs)} : null;
+}
 function val(code, key, d) {
   const s = S.series[code]; if (!s || !s[key]) return null;
   const i = daysBetween(S.start, d);
@@ -413,6 +464,11 @@ function plot(box, o) {
     s += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + yy + '" y2="' + yy + '" stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="6 3"/>';
     if (r.label) s += '<text x="' + (W - padR - 4) + '" y="' + (+yy - 5) + '" text-anchor="end" font-size="10.5" fill="var(--accent)">' + esc(r.label) + '</text>';
   }
+  for (const v of o.vlines || []) {
+    const vx = x(v.i).toFixed(1);
+    s += '<line x1="' + vx + '" x2="' + vx + '" y1="' + padT + '" y2="' + (H - padB) + '" stroke="var(--ink-2)" stroke-dasharray="3 3"/>';
+    if (v.label) s += '<text x="' + (+vx + 4) + '" y="' + (padT + 11) + '" font-size="10.5" fill="var(--ink-2)">' + esc(v.label) + '</text>';
+  }
   const ends = [];
   for (const sr of o.series || []) {
     let d = '', pen = false, li = -1;
@@ -478,12 +534,14 @@ let FIRST = null, LAST = null;
 
 /* ---------- headline tiles and meta ---------- */
 function renderMeta() {
-  const lasts = CO.map(c => S.series[c.code].last).sort();
-  const behind = CO.filter(c => S.series[c.code].last < LAST).map(c => c.code);
+  const lasts = CO.map(c => LASTOF[c.code]).sort();
+  const behind = CO.filter(c => LASTOF[c.code] < LAST).map(c => c.code);
   let h = '<span class="chip day">Latest gas day <b>' + fmtDay(LAST) + '</b></span>';
   h += '<span class="chip">Data fetched <b>' + esc((S.meta.generated || '').replace('T', ' ').slice(0, 16)) + ' UTC</b></span>';
   if (behind.length) h += '<span class="chip warn">Not yet reported for the latest day: <b>' + esc(behind.join(', ')) + '</b></span>';
   if (lasts.length && TTF) h += '<span class="chip">TTF to <b>' + fmtDay(TTF.end) + '</b></span>';
+  if (L) h += '<span class="chip">LNG (ALSI) to <b>' + fmtDay(L.end) + '</b></span>';
+  if (STALE.length) h += '<span class="chip warn">No recent AGSI+ data, hidden: <b>' + STALE.map(c => esc(c.code) + ' (last ' + fmtDay(LASTOF[c.code]) + ')').join(', ') + '</b></span>';
   $('#meta').innerHTML = h;
 }
 function renderKpis() {
@@ -498,6 +556,10 @@ function renderKpis() {
     ['Net flow, 7 days', fmtS(nf, 0) + '<small>GWh/d</small>', ok(nf) ? (nf >= 0 ? 'net injection' : 'net withdrawal') + ' · daily average' : ''],
     ['Change, 7 days', (ok(f) && ok(f7) ? fmtS(f - f7, 1) : '–') + '<small>pp</small>', ok(f7) ? 'from ' + fmtN(f7, 1) + '% on ' + fmtDM(addDays(d, -7)) : ''],
   ];
+  if (hasLNG(code)) {
+    const lv = lngAvg7(code, ST.date), lb = lngBase(code, ST.date);
+    tiles.push([cname(code) + ' LNG send-out', fmtN(lv, 0) + '<small>GWh/d</small>', lb && ok(lv) ? '7-day avg · ' + fmtS((lv / lb.avg - 1) * 100, 0) + '% vs 5-yr avg' : '7-day average']);
+  }
   $('#kpis').innerHTML = tiles.map(([l, v, s]) => '<div class="kpi"><span class="l">' + esc(l) + '</span><span class="v">' + v + '</span><span class="s">' + esc(s) + '</span></div>').join('');
 }
 
@@ -510,14 +572,14 @@ function setDate(d, opts = {}) {
   $('#d-slider').value = daysBetween(FIRST, d);
   $('#snap-title').textContent = fmtDay(d);
   renderKpis(); renderSnapView(); renderTable();
-  if (!opts.light) renderSeason();
+  if (!opts.light) { renderInsights(); renderOutlook(); renderSeason(); }
 }
 function initDate() {
   const sl = $('#d-slider'), inp = $('#d-input');
   sl.max = daysBetween(FIRST, LAST); inp.min = FIRST; inp.max = LAST;
   let raf = 0;
   sl.addEventListener('input', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => setDate(addDays(FIRST, +sl.value), {light: true})); });
-  sl.addEventListener('change', () => renderSeason());
+  sl.addEventListener('change', () => { renderInsights(); renderOutlook(); renderSeason(); });
   inp.addEventListener('change', () => { if (inp.value) setDate(inp.value); });
   $('#d-prev').addEventListener('click', () => setDate(addDays(ST.date, -1)));
   $('#d-next').addEventListener('click', () => setDate(addDays(ST.date, 1)));
@@ -535,7 +597,7 @@ function initDate() {
   }
   $('#d-ticks').innerHTML = ticks.join('');
 }
-function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; } $('#d-play').textContent = '▶ Play'; renderSeason(); }
+function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; } $('#d-play').textContent = '▶ Play'; renderInsights(); renderOutlook(); renderSeason(); }
 
 /* ---------- map and ranking ---------- */
 const FULL_BREAKS = [10, 20, 30, 40, 50, 60, 70, 80, 90];
@@ -659,7 +721,7 @@ function snapRows(d0) {
       d7: ok(f) && ok(val(code, 'full', addDays(d, -7))) ? f - val(code, 'full', addDays(d, -7)) : null,
       d30: ok(f) && ok(val(code, 'full', addDays(d, -30))) ? f - val(code, 'full', addDays(d, -30)) : null,
       avg: b ? b.avg : null, diff: b && ok(f) ? f - b.avg : null, nf: mean(dd => net(code, dd), d, 7),
-      cf, days: ok(cf) ? cf * 365 / 100 : null, st: stat(code, d)};
+      cf, days: ok(cf) ? cf * 365 / 100 : null, st: stat(code, d), lng: hasLNG(code) ? lngAvg7(code, d0) : null};
   }).sort((a, b) => (b.agg - a.agg) || ((b.full ?? -1) - (a.full ?? -1)));
 }
 function renderTable() {
@@ -667,20 +729,20 @@ function renderTable() {
   $('#tbl-sub').textContent = 'gas day ' + fmtDay(d);
   $('#ctable thead').innerHTML = '<tr><th>Country</th><th class="num">Fill<small>%</small></th><th class="num">In storage<small>TWh</small></th><th class="num">Capacity<small>TWh</small></th>' +
     '<th class="num">7 days<small>pp</small></th><th class="num">30 days<small>pp</small></th><th class="num">5-yr avg<small>%</small></th><th class="num">vs avg<small>pp</small></th>' +
-    '<th class="num">Net flow<small>7-day avg, GWh/d</small></th><th class="num">Share of<small>annual cons., %</small></th><th class="num">≈ Days<small>avg. demand</small></th></tr>';
+    '<th class="num">Net flow<small>7-day avg, GWh/d</small></th><th class="num">Share of<small>annual cons., %</small></th><th class="num">≈ Days<small>avg. demand</small></th><th class="num">LNG out<small>7-day avg, GWh/d</small></th></tr>';
   $('#ctable tbody').innerHTML = rows.map(r => '<tr data-c="' + r.code + '" class="' + (r.agg ? 'agg ' : '') + (r.code === ST.code ? 'sel' : '') + '">' +
     '<td>' + (r.agg ? esc(r.name) : esc(r.code) + ' · ' + esc(r.name)) + (r.lag ? '<br><span class="est">as of ' + fmtDM(r.day) + '</span>' : '') + '</td>' +
     '<td class="num">' + fmtN(r.full, 1) + (r.st === 'E' ? '<span class="est">e</span>' : '') + '</td>' +
     '<td class="num">' + fmtN(r.gas, 1) + '</td><td class="num">' + fmtN(r.wgv, 1) + '</td>' +
     '<td class="num">' + fmtS(r.d7, 1) + '</td><td class="num">' + fmtS(r.d30, 1) + '</td>' +
     '<td class="num">' + fmtN(r.avg, 1) + '</td><td class="num">' + fmtS(r.diff, 1) + '</td>' +
-    '<td class="num">' + fmtS(r.nf, 0) + '</td><td class="num">' + fmtN(r.cf, 1) + '</td><td class="num">' + fmtN(r.days, 0) + '</td></tr>').join('');
+    '<td class="num">' + fmtS(r.nf, 0) + '</td><td class="num">' + fmtN(r.cf, 1) + '</td><td class="num">' + fmtN(r.days, 0) + '</td><td class="num">' + fmtN(r.lng, 0) + '</td></tr>').join('');
   $('#ctable tbody').querySelectorAll('tr').forEach(tr => tr.addEventListener('click', () => selectCountry(tr.dataset.c, true)));
 }
 $('#dl-snap').addEventListener('click', () => {
   const d = ST.date, rows = snapRows(d);
-  saveCSV('gas-storage-' + d + '.csv', [['gas_day', 'reported_day', 'code', 'country', 'fill_pct', 'gas_in_storage_twh', 'working_gas_volume_twh', 'change_7d_pp', 'change_30d_pp', 'avg_5y_pct', 'vs_avg_5y_pp', 'net_flow_7d_avg_gwh_d', 'pct_of_annual_consumption', 'approx_days_avg_demand', 'status']]
-    .concat(rows.map(r => [d, r.day, r.code, r.name, r.full, r.gas, r.wgv, r.d7, r.d30, r.avg, r.diff, r.nf, r.cf, r.days, r.st])));
+  saveCSV('gas-storage-' + d + '.csv', [['gas_day', 'reported_day', 'code', 'country', 'fill_pct', 'gas_in_storage_twh', 'working_gas_volume_twh', 'change_7d_pp', 'change_30d_pp', 'avg_5y_pct', 'vs_avg_5y_pp', 'net_flow_7d_avg_gwh_d', 'pct_of_annual_consumption', 'approx_days_avg_demand', 'status', 'lng_sendout_7d_avg_gwh_d']]
+    .concat(rows.map(r => [d, r.day, r.code, r.name, r.full, r.gas, r.wgv, r.d7, r.d30, r.avg, r.diff, r.nf, r.cf, r.days, r.st, r.lng])));
 });
 
 /* ---------- seasonal curve ---------- */
@@ -829,6 +891,24 @@ function renderHist() {
     aria: 'Net injection and withdrawal', onMove: move, onLeave: leave,
     tip: i => { const b = barAt(i); return head(i) + '<br>' + swatch(b && b.v >= 0 ? 'var(--inj)' : 'var(--wdr)') + (b && b.v >= 0 ? 'Net injection ' : 'Net withdrawal ') + '<b>' + fmtN(b ? Math.abs(b.v) : null, 0) + '</b> GWh/d' + (res !== 'daily' && b ? '<br><span class="mut">' + res + ', ' + fmtDM(days[b.a]) + '–' + fmtDM(days[b.b]) + '</span>' : ''); },
   }));
+  const lngOn = hasLNG(code);
+  $('#h-lng-sub').textContent = lngOn ? 'GWh/d, 7-day average' : '';
+  if (lngOn) {
+    const l7 = days.map(d => lngAvg7(code, d)), lb = days.map(d => lngBase(code, d));
+    $('#h-lng-key').innerHTML = '<span><i style="background:var(--s3)"></i>' + esc(cname(code)) + ' send-out</span><span><i class="dash"></i>5-year average, same week</span><span><i class="box" style="background:var(--band)"></i>5-year range</span>';
+    charts.push(plot($('#h-lng'), {
+      n, xTicks: ticks, unit: 'GWh/d', H: small ? 150 : 180, zero: true, band: {lo: lb.map(b => b ? b.min : null), hi: lb.map(b => b ? b.max : null)},
+      series: [{name: '5-yr avg', vals: lb.map(b => b ? b.avg : null), color: 'var(--ink-2)', width: 1.5, dash: '5 4', noDot: true}, {name: 'LNG send-out', vals: l7, color: 'var(--s3)', width: 2}],
+      aria: 'LNG send-out', onMove: move, onLeave: leave,
+      tip: i => { const d = days[i], inv = lval(code, 'inv', d), mx = lval(code, 'dtmi', d), sd = lval(code, 'sendOut', d);
+        return head(i) + '<br>' + swatch('var(--s3)') + 'Send-out <b>' + fmtN(l7[i], 0) + '</b> GWh/d <span class="mut">7-day avg (day ' + fmtN(sd, 0) + ')</span>' +
+          (ok(inv) ? '<br><span class="mut">In tanks ' + fmtN(inv / 1000, 2) + ' TWh' + (ok(mx) && mx > 0 ? ' · ' + fmtN(inv / mx * 100, 0) + '% of max' : '') + '</span>' : '') +
+          (lb[i] ? '<br><span class="mut">5-yr avg ' + fmtN(lb[i].avg, 0) + ' GWh/d</span>' : ''); },
+    }));
+  } else {
+    $('#h-lng-key').innerHTML = '';
+    $('#h-lng').innerHTML = '<p class="lng-none">No ALSI LNG data for ' + esc(cname(code)) + (L ? '.' : ' yet: it arrives with the next data update.') + '</p>';
+  }
   charts.push(plot($('#h-ttf'), {
     n, xTicks: ticks, unit: '€/MWh', H: small ? 150 : 180,
     series: [{name: 'TTF', vals: tt, color: 'var(--ttf)', width: 2}],
@@ -850,24 +930,353 @@ function initHist() {
   $('#h-from').addEventListener('change', onDates); $('#h-to').addEventListener('change', onDates);
 }
 $('#dl-hist').addEventListener('click', () => {
-  const code = ST.code, n = daysBetween(ST.from, ST.to) + 1, rows = [['gas_day', 'code', 'fill_pct', 'gas_in_storage_twh', 'working_gas_volume_twh', 'injection_gwh_d', 'withdrawal_gwh_d', 'net_flow_gwh_d', 'avg_5y_pct', 'min_5y_pct', 'max_5y_pct', 'pct_of_annual_consumption', 'ttf_eur_mwh', 'status']];
+  const code = ST.code, n = daysBetween(ST.from, ST.to) + 1, rows = [['gas_day', 'code', 'fill_pct', 'gas_in_storage_twh', 'working_gas_volume_twh', 'injection_gwh_d', 'withdrawal_gwh_d', 'net_flow_gwh_d', 'avg_5y_pct', 'min_5y_pct', 'max_5y_pct', 'pct_of_annual_consumption', 'ttf_eur_mwh', 'status', 'lng_sendout_gwh_d', 'lng_in_tanks_gwh', 'lng_max_inventory_gwh']];
   for (let i = 0; i < n; i++) {
     const d = addDays(ST.from, i), b = base5(code, 'full', d);
-    rows.push([d, code, val(code, 'full', d), val(code, 'gas', d), val(code, 'wgv', d), val(code, 'inj', d), val(code, 'wdr', d), net(code, d), b ? b.avg : null, b ? b.min : null, b ? b.max : null, val(code, 'consFull', d), ttf(d), stat(code, d)]);
+    rows.push([d, code, val(code, 'full', d), val(code, 'gas', d), val(code, 'wgv', d), val(code, 'inj', d), val(code, 'wdr', d), net(code, d), b ? b.avg : null, b ? b.min : null, b ? b.max : null, val(code, 'consFull', d), ttf(d), stat(code, d), lval(code, 'sendOut', d), lval(code, 'inv', d), lval(code, 'dtmi', d)]);
   }
   saveCSV('history-' + code + '-' + ST.from + '-' + ST.to + '.csv', rows);
 });
+
+/* ---------- winter outlook: today's level plus each past year's day-by-day change ---------- */
+const OL = {n: +lsGet('ol-n', 10)};
+function horizonFor(d) {
+  const y = +d.slice(0, 4), m = +d.slice(5, 7);
+  if (m >= 10) return {kind: 'winter', end: (y + 1) + '-03-31'};
+  if (m <= 3) return {kind: 'winter', end: y + '-03-31'};
+  return {kind: 'refill', end: y + '-12-01'};
+}
+function pastLabel(d, k, kind) {
+  const y = +d.slice(0, 4) - k, m = +d.slice(5, 7);
+  if (kind === 'refill') return String(y);
+  const y0 = m >= 10 ? y : y - 1;
+  return y0 + '/' + String(y0 + 1).slice(2);
+}
+function outlook(code, d0, nMax) {
+  const d = reportedDay(code, d0); if (!d) return null;
+  const H = horizonFor(d0), n = daysBetween(d, H.end); if (n < 2) return null;
+  const f0 = val(code, 'full', d), paths = [];
+  for (let k = 1; k <= nMax; k++) {
+    if (addDays(yearsAgo(d, k), -1) < S.start) break;
+    let lvl = f0, miss = 0; const p = [f0];
+    for (let i = 1; i <= n; i++) {
+      const a = yearsAgo(addDays(d, i), k), b = addDays(a, -1);
+      const ga = val(code, 'gas', a), gb = val(code, 'gas', b), w = val(code, 'wgv', a);
+      let dv = null;
+      if (ok(ga) && ok(gb) && ok(w) && w > 0) dv = (ga - gb) / w * 100;
+      else { const fa = val(code, 'full', a), fb = val(code, 'full', b); if (ok(fa) && ok(fb)) dv = fa - fb; }
+      if (dv === null) { miss++; dv = 0; }
+      lvl = Math.max(0, Math.min(100, lvl + dv)); p.push(lvl);
+    }
+    const e = p.findIndex(v => v <= 0.05);
+    if (miss <= n * 0.05) paths.push({k, label: pastLabel(d, k, H.kind), p, end: p[n], empty: e > 0 ? addDays(d, e) : null});
+  }
+  if (!paths.length) return null;
+  const med = [], lo = [], hi = [];
+  for (let i = 0; i <= n; i++) {
+    const xs = paths.map(q => q.p[i]).sort((a, b) => a - b), m = xs.length;
+    lo.push(xs[0]); hi.push(xs[m - 1]); med.push(m % 2 ? xs[(m - 1) / 2] : (xs[m / 2 - 1] + xs[m / 2]) / 2);
+  }
+  const R = {code, d, H, n, f0, paths, med, lo, hi, ends: paths.slice().sort((a, b) => a.end - b.end)};
+  if (H.kind === 'refill') {
+    const a = Math.max(0, daysBetween(d, d.slice(0, 4) + '-10-01'));
+    paths.forEach(q => { q.win = Math.max(...q.p.slice(a)); });
+    R.reach = paths.filter(q => q.win >= 90).length;
+  } else R.below30 = paths.filter(q => q.end < 30).length;
+  return R;
+}
+function renderOutlook() {
+  if (!S) return;
+  $('#ol-chips').innerHTML = CO.map(c => '<button type="button" class="zp" data-c="' + c.code + '" aria-pressed="' + (c.code === ST.code) + '"><i style="background:var(--ink)"></i>' + esc(c.code) + '</button>').join('');
+  $('#ol-chips').querySelectorAll('.zp').forEach(b => b.addEventListener('click', () => selectCountry(b.dataset.c, false)));
+  const code = ST.code, R = outlook(code, ST.date, OL.n), H = horizonFor(ST.date), winter = H.kind === 'winter';
+  const endLab = winter ? '31 Mar' : '1 Dec';
+  $('#ol-title').textContent = winter ? 'Winter outlook' : 'Refill outlook';
+  $('#ol-intro').textContent = (winter ? 'Where storage could stand on 31 March ' : 'Where storage could stand by 1 December ') +
+    'if, from the chosen day, it changes the way it did on the same days in each past year (scaled to each year\'s capacity). A what-if on past patterns, not a forecast. Pick an earlier day above to see how it compared with what happened.';
+  if (!R) { $('#ol-chart').innerHTML = '<p class="map-msg" style="padding:30px 0">Not enough history for ' + esc(cname(code)) + ' from this day.</p>'; $('#ol-sub').textContent = ''; }
+  else {
+    const pre = 90, N = pre + R.n + 1, idx = i => i - pre, date = i => addDays(R.d, idx(i));
+    const at = (arr, i) => idx(i) >= 0 ? arr[idx(i)] : null;
+    const actual = Array.from({length: N}, (_, i) => { const t = date(i); return t <= LAST ? val(code, 'full', t) : null; });
+    const series = R.paths.map(q => ({name: q.label, vals: Array.from({length: N}, (_, i) => at(q.p, i)), color: 'var(--line-strong)', width: 1, noDot: true}));
+    const low = R.ends[0], high = R.ends[R.ends.length - 1];
+    if (R.paths.length > 1) {
+      series.push({name: 'like ' + high.label, vals: Array.from({length: N}, (_, i) => at(high.p, i)), color: 'var(--inj)', width: 1.5, noDot: true, endLabel: high.label + ' ' + fmtN(high.end, 0) + '%'});
+      series.push({name: 'like ' + low.label, vals: Array.from({length: N}, (_, i) => at(low.p, i)), color: 'var(--wdr)', width: 1.5, noDot: true, endLabel: low.label + ' ' + fmtN(low.end, 0) + '%'});
+    }
+    series.push({name: 'Median', vals: Array.from({length: N}, (_, i) => at(R.med, i)), color: 'var(--ink-2)', width: 2, dash: '6 4', endLabel: 'median ' + fmtN(R.med[R.n], 0) + '%'});
+    series.push({name: 'Actual', vals: actual, color: 'var(--ink)', width: 2.5});
+    const dates = Array.from({length: N}, (_, i) => date(i));
+    const ticks = dates.map((t, i) => t.slice(8) === '01' ? [i, MON[+t.slice(5, 7) - 1]] : null).filter(Boolean);
+    const shades = [], refs = [];
+    if (!winter && isTarget(code)) {
+      const a = dates.indexOf(R.d.slice(0, 4) + '-10-01'), b = dates.indexOf(R.d.slice(0, 4) + '-12-01');
+      if (a >= 0 && b >= 0) shades.push([a, b, '1 Oct–1 Dec']);
+      refs.push({v: 90, label: '90% target'});
+    }
+    $('#ol-sub').textContent = cname(code) + ' · from ' + fmtDay(R.d) + ' (' + fmtN(R.f0, 1) + '%) · ' + R.paths.length + ' past ' + (winter ? 'winters' : 'years');
+    $('#ol-key').innerHTML = '<span><i style="background:var(--ink);height:4px"></i>Actual</span><span><i class="dash"></i>Median of past years</span><span><i class="box" style="background:var(--band)"></i>Range</span>' +
+      '<span><i style="background:var(--line-strong)"></i>One past ' + (winter ? 'winter' : 'year') + ' each</span><span><i style="background:var(--wdr)"></i>Lowest end</span><span><i style="background:var(--inj)"></i>Highest end</span>' +
+      (refs.length ? '<span><i class="tgt"></i>90% target</span>' : '');
+    plot($('#ol-chart'), {
+      n: N, series, band: {lo: dates.map((_, i) => at(R.lo, i)), hi: dates.map((_, i) => at(R.hi, i))}, xTicks: ticks, unit: '%', clamp: [0, 100], padR: 92,
+      vlines: [{i: pre, label: fmtDM(R.d)}], shades, refs, H: ($('#ol-chart').clientWidth || 600) < 520 ? 250 : 320,
+      aria: 'Storage outlook for ' + cname(code),
+      tip: i => {
+        let h = '<b>' + fmtDay(dates[i]) + '</b>';
+        if (ok(actual[i])) h += '<br>' + swatch('var(--ink)') + 'Actual <b>' + fmtN(actual[i], 1) + '%</b>';
+        if (idx(i) > 0) {
+          h += '<br>' + swatch('var(--ink-2)') + 'Median <b>' + fmtN(R.med[idx(i)], 1) + '%</b> <span class="mut">range ' + fmtN(R.lo[idx(i)], 0) + '–' + fmtN(R.hi[idx(i)], 0) + '</span>';
+          h += '<br><span class="mut">' + R.paths.slice().sort((a, b) => b.p[idx(i)] - a.p[idx(i)]).map(q => 'like ' + q.label + ' ' + fmtN(q.p[idx(i)], 0)).join(' · ').replace(/((?:[^·]*·){3}[^·]*)·/g, '$1<br>') + '</span>';
+        }
+        return h;
+      },
+    });
+    $('#ol-foot').textContent = winter
+      ? 'On 31 Mar: median ' + fmtN(R.med[R.n], 1) + '%, from ' + (low.empty ? 'empty by ' + fmtDM(low.empty) : fmtN(low.end, 1) + '%') + ' (like ' + low.label + ') to ' + fmtN(high.end, 1) + '% (like ' + high.label + '); below 30% in ' + R.below30 + ' of ' + R.paths.length + '.'
+      : 'Reaches 90% between 1 Oct and 1 Dec in ' + R.reach + ' of ' + R.paths.length + ' past years.';
+  }
+  // all countries
+  $('#ol-t-title').textContent = 'All countries · from ' + fmtDay(ST.date) + ' to ' + endLab;
+  $('#ol-table thead').innerHTML = winter
+    ? '<tr><th>Country</th><th class="num">Now<small>%</small></th><th class="num">Median<small>' + endLab + ', %</small></th><th class="num">Lowest<small>%</small></th><th>like</th><th class="num">Highest<small>%</small></th><th>like</th><th class="num">Below 30%<small>past winters</small></th></tr>'
+    : '<tr><th>Country</th><th class="num">Now<small>%</small></th><th class="num">Median<small>' + endLab + ', %</small></th><th class="num">Lowest<small>%</small></th><th>like</th><th class="num">Highest<small>%</small></th><th>like</th><th class="num">Reach 90%<small>1 Oct–1 Dec</small></th></tr>';
+  const rows = CO.map(c => ({c, R: outlook(c.code, ST.date, OL.n)})).filter(r => r.R);
+  $('#ol-table tbody').innerHTML = rows.map(({c, R: q}) => {
+    const lo = q.ends[0], hi = q.ends[q.ends.length - 1];
+    return '<tr data-c="' + c.code + '" class="' + (c.aggregate ? 'agg ' : '') + (c.code === ST.code ? 'sel' : '') + '"><td>' + (c.aggregate ? 'EU total' : esc(c.code) + ' · ' + esc(c.name)) + '</td>' +
+      '<td class="num">' + fmtN(q.f0, 1) + '</td><td class="num">' + fmtN(q.med[q.n], 1) + '</td><td class="num">' + (lo.empty ? 'empty ' + fmtDM(lo.empty) : fmtN(lo.end, 1)) + '</td><td>' + lo.label + '</td><td class="num">' + fmtN(hi.end, 1) + '</td><td>' + hi.label + '</td>' +
+      '<td class="num">' + (winter ? q.below30 : (c.eu_target ? q.reach : '–')) + ' of ' + q.paths.length + '</td></tr>';
+  }).join('');
+  $('#ol-table tbody').querySelectorAll('tr').forEach(tr => tr.addEventListener('click', () => selectCountry(tr.dataset.c, false)));
+}
+$('#dl-ol').addEventListener('click', () => {
+  const R = outlook(ST.code, ST.date, OL.n); if (!R) return;
+  const head = ['date', 'actual_pct', 'median_pct', 'min_pct', 'max_pct'].concat(R.paths.map(q => 'like_' + q.label.replace('/', '_')));
+  const rows = [head];
+  for (let i = 0; i <= R.n; i++) { const t = addDays(R.d, i); rows.push([t, t <= LAST ? val(R.code, 'full', t) : null, R.med[i], R.lo[i], R.hi[i]].concat(R.paths.map(q => q.p[i]))); }
+  saveCSV('outlook-' + R.code + '-from-' + R.d + '.csv', rows);
+});
+
+/* ---------- what stands out ---------- */
+const nb = (v, d = 1, u = '') => '<b class="n">' + v + u + '</b>';
+function sameDay(code, key, d, getter = val) {   // value on the same calendar day in every earlier year
+  const out = [];
+  for (let k = 1; k <= 30; k++) { const a = yearsAgo(d, k); if (a < S.start) break; const v = getter(code, key, a); if (ok(v)) out.push({y: +a.slice(0, 4), v}); }
+  return out;
+}
+function insights(d0) {
+  const out = [], dm = fmtDM(d0), firstY = +S.start.slice(0, 4);
+  const add = (score, tag, code, h, p) => out.push({score, tag, code, h, p});
+  const label = code => CM[code].aggregate ? 'EU storage' : cname(code);
+  for (const c of CO) {
+    const code = c.code, d = reportedDay(code, d0); if (!d) continue;
+    const v = val(code, 'full', d), hist = sameDay(code, 'full', d), agg = c.aggregate ? 10 : 0;
+    // record for the calendar day
+    if (hist.length >= 5) {
+      const lower = hist.filter(h => h.v < v), higher = hist.filter(h => h.v > v);
+      const fromY = Math.min(...hist.map(h => h.y));
+      if (!lower.length) { const prev = hist.reduce((a, b) => b.v < a.v ? b : a); add(85 + agg, 'Record', code, label(code) + ' is the lowest for ' + fmtDM(d) + ' since at least ' + fromY, nb(fmtN(v, 1), 1, '%') + ' full; the previous low for this day was ' + nb(fmtN(prev.v, 1), 1, '%') + ' in ' + prev.y + '.'); }
+      else if (!higher.length) { const prev = hist.reduce((a, b) => b.v > a.v ? b : a); add(70 + agg, 'Record', code, label(code) + ' is the highest for ' + fmtDM(d) + ' since at least ' + fromY, nb(fmtN(v, 1), 1, '%') + ' full; the previous high for this day was ' + nb(fmtN(prev.v, 1), 1, '%') + ' in ' + prev.y + '.'); }
+      else if (lower.length === 1 && c.aggregate) add(55, 'Low', code, 'EU storage is the second-lowest for ' + fmtDM(d) + ' since ' + fromY, 'Only ' + lower[0].y + ' was lower on this day (' + nb(fmtN(lower[0].v, 1), 1, '%') + ').');
+    }
+    // streak outside the 5-year range
+    const b = base5(code, 'full', d);
+    if (b && (v < b.min || v > b.max)) {
+      const below = v < b.min; let k = 0;
+      while (k < 400) { const t = addDays(d, -k), bb = base5(code, 'full', t), vv = val(code, 'full', t); if (!bb || !ok(vv) || (below ? vv >= bb.min : vv <= bb.max)) break; k++; }
+      add((below ? 60 : 40) + Math.min(k, 60) / 4 + agg, 'Range', code, label(code) + ' has been ' + (below ? 'below' : 'above') + ' its 5-year range for ' + k + (k === 1 ? ' day' : ' days'),
+        nb(fmtN(v, 1), 1, '%') + ' against a 5-year ' + (below ? 'low' : 'high') + ' of ' + nb(fmtN(below ? b.min : b.max, 1), 1, '%') + ' for ' + fmtDM(d) + ' (average ' + fmtN(b.avg, 1) + '%).');
+    }
+    // fastest 7-day change for this week of the year
+    const v7 = val(code, 'full', addDays(d, -7));
+    if (ok(v7)) {
+      const ch = v - v7, past = [];
+      for (let k = 1; k <= 30; k++) { const a = yearsAgo(d, k); if (addDays(a, -7) < S.start) break; const x1 = val(code, 'full', a), x0 = val(code, 'full', addDays(a, -7)); if (ok(x1) && ok(x0)) past.push({y: +a.slice(0, 4), v: x1 - x0}); }
+      if (past.length >= 5 && Math.abs(ch) >= 0.5) {
+        const fromY = Math.min(...past.map(q => q.y));
+        if (ch < 0 && past.every(q => ch < q.v)) add(72 + agg, 'Pace', code, label(code) + ' fell ' + fmtN(-ch, 1) + ' pp in 7 days, the fastest for this week since at least ' + fromY, 'From ' + nb(fmtN(v7, 1), 1, '%') + ' to ' + nb(fmtN(v, 1), 1, '%') + '. The previous biggest drop over the same week was ' + fmtN(-Math.min(...past.map(q => q.v)), 1) + ' pp.');
+        else if (ch > 0 && past.every(q => ch > q.v)) add(62 + agg, 'Pace', code, label(code) + ' rose ' + fmtN(ch, 1) + ' pp in 7 days, the fastest for this week since at least ' + fromY, 'From ' + nb(fmtN(v7, 1), 1, '%') + ' to ' + nb(fmtN(v, 1), 1, '%') + '. The previous biggest rise over the same week was ' + fmtN(Math.max(...past.map(q => q.v)), 1) + ' pp.');
+      }
+    }
+  }
+  // widest gaps to the 5-year average among countries
+  const gaps = CO.filter(c => !c.aggregate).map(c => { const d = reportedDay(c.code, d0), v = d && val(c.code, 'full', d), b = d && base5(c.code, 'full', d); return b && ok(v) ? {c, v, b, g: v - b.avg} : null; }).filter(Boolean).sort((a, b) => a.g - b.g);
+  if (gaps.length > 1) {
+    const w = gaps[0], t = gaps[gaps.length - 1];
+    if (w.g <= -3) add(50, 'Gap', w.c.code, w.c.name + ' is furthest below normal: ' + fmtN(-w.g, 1) + ' pp under its 5-year average', nb(fmtN(w.v, 1), 1, '%') + ' against ' + nb(fmtN(w.b.avg, 1), 1, '%') + ' on average for ' + dm + '. ' + gaps.map(x => x.c.code + ' ' + fmtS(x.g, 1)).join(' · ') + ' pp.');
+    if (t.g >= 3) add(42, 'Gap', t.c.code, t.c.name + ' is furthest above normal: ' + fmtN(t.g, 1) + ' pp over its 5-year average', nb(fmtN(t.v, 1), 1, '%') + ' against ' + nb(fmtN(t.b.avg, 1), 1, '%') + ' on average for ' + dm + '.');
+  }
+  // filling target and season peak
+  const y = +d0.slice(0, 4), m = +d0.slice(5, 7), sy = m >= 4 ? y : y - 1, wa = sy + '-10-01', wb = sy + '-12-01';
+  const tg = CO.filter(c => c.eu_target);
+  if (d0 >= wa) {
+    const res = tg.map(c => {
+      let first = null, peak = -1, pd = null;
+      for (let t = wa; t <= (d0 < wb ? d0 : wb); t = addDays(t, 1)) { const v = val(c.code, 'full', t); if (!ok(v)) continue; if (v > peak) { peak = v; pd = t; } if (!first && v >= 90) first = t; }
+      return {c, first, peak, pd};
+    }).filter(r => r.pd);
+    const hit = res.filter(r => r.first), miss = res.filter(r => !r.first);
+    if (res.length) add(66, 'Target', null, (d0 <= wb ? 'In the 1 Oct–1 Dec window so far: ' : 'In the 1 Oct–1 Dec window: ') + hit.length + ' of ' + res.length + ' reached 90%',
+      (hit.length ? 'Reached: ' + hit.map(r => esc(r.c.code) + ' (' + fmtDM(r.first) + ')').join(', ') + '. ' : '') + (miss.length ? (d0 <= wb ? 'Not yet: ' : 'Not reached: ') + miss.map(r => esc(r.c.code) + ' peaked at ' + nb(fmtN(r.peak, 1), 1, '%')).join(', ') + '. ' : '') + 'EU rules allow deviations in difficult market conditions.');
+  } else if (m >= 4) {
+    const eu = CO.find(c => c.aggregate) || CO[0], d = reportedDay(eu.code, d0), v = d && val(eu.code, 'full', d);
+    if (ok(v) && v < 90) {
+      const days = daysBetween(d, wa), need = (90 - v) / Math.max(1, days), past = [];
+      for (let k = 1; k <= 5; k++) { const a = yearsAgo(d, k), b = yearsAgo(wa, k), x0 = val(eu.code, 'full', a), x1 = val(eu.code, 'full', b); if (ok(x0) && ok(x1)) past.push((x1 - x0) / Math.max(1, days)); }
+      if (past.length >= 3) { const avg = past.reduce((a, b) => a + b, 0) / past.length;
+        add(68, 'Refill', eu.code, label(eu.code) + ' needs ' + fmtN(need, 2) + ' pp a day to reach 90% by 1 October', nb(fmtN(v, 1), 1, '%') + ' now, ' + days + ' days to go. Over the same stretch the last ' + past.length + ' years averaged ' + nb(fmtS(avg, 2), 2, ' pp') + ' a day' + (avg >= need ? ', enough at that pace.' : ', short of what is needed.')); }
+    }
+  }
+  if (m >= 10 || m <= 3) {
+    const eu = CO.find(c => c.aggregate) || CO[0];
+    const peakOf = yy => { let pk = -1, pd = null; for (let t = yy + '-04-01'; t <= (yy === sy ? d0 : yy + '-12-31'); t = addDays(t, 1)) { const v = val(eu.code, 'full', t); if (ok(v) && v > pk) { pk = v; pd = t; } } return pd ? {pk, pd, yy} : null; };
+    const cur = peakOf(sy), prev = [];
+    for (let yy = sy - 1; yy >= firstY; yy--) { const p = peakOf(yy); if (p) prev.push(p); }
+    if (cur && prev.length) {
+      const lowerThan = prev.filter(p => p.pk < cur.pk).length, last = prev[0];
+      const rec = prev.length >= 4 && (lowerThan === 0 ? ' — the lowest peak since at least ' + prev[prev.length - 1].yy : lowerThan === prev.length ? ' — the highest peak since at least ' + prev[prev.length - 1].yy : '');
+      add(rec ? 58 : 38, 'Peak', eu.code, label(eu.code) + ' peaked at ' + fmtN(cur.pk, 1) + '% on ' + fmtDay(cur.pd) + (rec || ''), 'Last year it peaked at ' + nb(fmtN(last.pk, 1), 1, '%') + ' on ' + fmtDay(last.pd) + '. ' + (cur.pd < d0 ? 'Now ' + nb(fmtN(val(eu.code, 'full', reportedDay(eu.code, d0)), 1), 1, '%') + '.' : ''));
+    }
+  }
+  // year on year (EU)
+  { const eu = CO.find(c => c.aggregate); if (eu) { const d = reportedDay(eu.code, d0), v = val(eu.code, 'full', d), ly = val(eu.code, 'full', yearsAgo(d, 1));
+    if (ok(v) && ok(ly) && Math.abs(v - ly) >= 5) add(44, 'Year on year', eu.code, 'EU storage is ' + fmtN(Math.abs(v - ly), 1) + ' pp ' + (v < ly ? 'below' : 'above') + ' a year ago', nb(fmtN(v, 1), 1, '%') + ' now against ' + nb(fmtN(ly, 1), 1, '%') + ' on ' + fmtDay(yearsAgo(d, 1)) + '.'); } }
+  // TTF
+  if (TTF) {
+    let td = d0 > TTF.end ? TTF.end : d0; while (td >= TTF.start && !ok(ttf(td))) td = addDays(td, -1);
+    const p = ttf(td);
+    if (ok(p)) {
+      let since = null; for (let t = addDays(td, -1); t >= TTF.start; t = addDays(t, -1)) { const q = ttf(t); if (ok(q) && q >= p) { since = t; break; } }
+      let below = null; for (let t = addDays(td, -1); t >= TTF.start; t = addDays(t, -1)) { const q = ttf(t); if (ok(q) && q <= p) { below = t; break; } }
+      const p30 = ttf(addDays(td, -30)), chg = ok(p30) ? (p / p30 - 1) * 100 : null;
+      if (since === null || daysBetween(since, td) >= 120) add(64, 'Price', null, 'TTF at ' + fmtN(p, 2) + ' €/MWh, the highest since ' + (since ? fmtDay(since) : 'the start of the TTF data (' + fmtDay(TTF.start) + ')'), (ok(chg) ? nb(fmtS(chg, 0), 0, '%') + ' in 30 days. ' : '') + 'Price on ' + fmtDay(td) + '.');
+      else if (below && daysBetween(below, td) >= 120) add(54, 'Price', null, 'TTF at ' + fmtN(p, 2) + ' €/MWh, the lowest since ' + fmtDay(below), (ok(chg) ? nb(fmtS(chg, 0), 0, '%') + ' in 30 days. ' : '') + 'Price on ' + fmtDay(td) + '.');
+      else if (ok(chg) && Math.abs(chg) >= 15) add(46, 'Price', null, 'TTF ' + (chg > 0 ? 'up' : 'down') + ' ' + fmtN(Math.abs(chg), 0) + '% in 30 days', nb(fmtN(p, 2), 2, ' €/MWh') + ' on ' + fmtDay(td) + ', from ' + fmtN(p30, 2) + '.');
+    }
+  }
+  // LNG send-out (EU)
+  { const eu = CO.find(c => c.aggregate);
+    if (eu && hasLNG(eu.code)) {
+      const lv = lngAvg7(eu.code, d0), past = sameDay(eu.code, 'x', d0, (c, k, a) => lngAvg7(c, a));
+      if (ok(lv) && past.length >= 5) {
+        const fromY = Math.min(...past.map(q => q.y)), avg5 = past.slice(0, 5).reduce((a, b) => a + b.v, 0) / Math.min(5, past.length);
+        if (past.every(q => lv > q.v)) add(60, 'LNG', eu.code, 'EU LNG send-out is the highest for this week since at least ' + fromY, nb(fmtN(lv, 0), 0, ' GWh/d') + ' on average over 7 days; the previous high for the same week was ' + fmtN(Math.max(...past.map(q => q.v)), 0) + ' GWh/d.');
+        else if (past.every(q => lv < q.v)) add(56, 'LNG', eu.code, 'EU LNG send-out is the lowest for this week since at least ' + fromY, nb(fmtN(lv, 0), 0, ' GWh/d') + ' on average over 7 days.');
+        else if (Math.abs(lv / avg5 - 1) >= 0.2) add(40, 'LNG', eu.code, 'EU LNG send-out ' + fmtN(Math.abs(lv / avg5 - 1) * 100, 0) + '% ' + (lv > avg5 ? 'above' : 'below') + ' its 5-year average', nb(fmtN(lv, 0), 0, ' GWh/d') + ' over 7 days against ' + fmtN(avg5, 0) + ' GWh/d.');
+      }
+    } }
+  // pick the strongest, at most two per country
+  out.sort((a, b) => b.score - a.score);
+  const per = {}, perTag = {}, pick = [];   // at most two per country and two of a kind
+  for (const x of out) { const k = x.code || '_'; if ((per[k] || 0) >= 2 || (perTag[x.tag] || 0) >= 2) continue; per[k] = (per[k] || 0) + 1; perTag[x.tag] = (perTag[x.tag] || 0) + 1; pick.push(x); if (pick.length >= 6) break; }
+  return pick;
+}
+function renderInsights() {
+  if (!S) return;
+  const list = insights(ST.date);
+  $('#ins-sub').textContent = 'gas day ' + fmtDay(ST.date);
+  $('#insights').innerHTML = list.length ? list.map(x => '<div class="ins"><div class="tag">' + esc(x.tag) + '</div><div><h4>' + esc(x.h) + '</h4><p>' + x.p + '</p></div></div>').join('')
+    : '<p class="sub-p">Nothing unusual on this day: every tracked country is inside its 5-year range and no records were set.</p>';
+}
+
+/* ---------- PNG export: chart(s) with title, legend and source on one image ---------- */
+async function savePNG(o) {
+  try { await document.fonts.ready; } catch (e) { /* fine */ }
+  const cs = getComputedStyle(document.documentElement), cv = n => cs.getPropertyValue(n).trim();
+  const fb = cv('--f-body'), fm = cv('--f-mono'), fd = cv('--f-display');
+  const pad = 24, scale = 2;
+  const blocks = [];
+  for (const b of o.blocks) {
+    const svg = b.el && b.el.querySelector('svg'); if (!svg) continue;
+    const r = svg.getBoundingClientRect(), c = svg.cloneNode(true);
+    c.querySelectorAll('.hit, .xh, .dots').forEach(e => e.remove());
+    c.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); c.setAttribute('width', r.width); c.setAttribute('height', r.height);
+    let xml = new XMLSerializer().serializeToString(c);
+    xml = xml.replace(/var\((--[\w-]+)\)/g, (_, n) => (cv(n) || '#888').replace(/"/g, "'"));
+    xml = xml.replace(/^(<svg[^>]*>)/, '$1<style>text{font-family:' + fm.replace(/"/g, "'") + '}</style>');
+    const img = new Image(), url = URL.createObjectURL(new Blob([xml], {type: 'image/svg+xml;charset=utf-8'}));
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+    blocks.push({img, url, w: r.width, h: r.height, label: b.label, keyEl: b.keyEl});
+  }
+  if (!blocks.length) return;
+  const W = Math.max(...blocks.map(b => b.w)) + 2 * pad;
+  const mctx = document.createElement('canvas').getContext('2d');
+  const ops = [], wrap = (txt, font, maxW) => { mctx.font = font; const words = txt.split(' '), lines = []; let cur = ''; for (const w of words) { const t = cur ? cur + ' ' + w : w; if (mctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = w; } else cur = t; } if (cur) lines.push(cur); return lines; };
+  const text = (t, x, y, font, color) => ops.push(ctx => { ctx.font = font; ctx.fillStyle = color; ctx.textBaseline = 'alphabetic'; ctx.fillText(t, x, y); });
+  let y = pad + 22;
+  text(o.title.toUpperCase(), pad, y, '800 26px ' + fd, cv('--ink'));
+  for (const line of wrap(o.sub || '', '500 13px ' + fb, W - 2 * pad)) { y += 19; text(line, pad, y, '500 13px ' + fb, cv('--ink-2')); }
+  y += 10;
+  for (const b of blocks) {
+    if (b.label) { y += 22; text(b.label.toUpperCase(), pad, y, '800 17px ' + fd, cv('--ink')); }
+    if (b.keyEl && b.keyEl.children.length) {
+      y += 8; let x = pad, rowY = y + 12;
+      for (const sp of b.keyEl.querySelectorAll('span')) {
+        const i = sp.querySelector('i'), t = sp.textContent.trim(); if (!i) continue;
+        mctx.font = '500 12px ' + fb; const w = 18 + mctx.measureText(t).width + 16;
+        if (x + w > W - pad) { x = pad; rowY += 18; }
+        const st = getComputedStyle(i), col = st.backgroundColor, xx = x, yy = rowY;
+        const kind = i.classList.contains('dash') ? 'dash' : i.classList.contains('tgt') ? 'tgt' : i.classList.contains('box') ? 'box' : 'line';
+        ops.push(ctx => {
+          if (kind === 'box') { ctx.fillStyle = col; ctx.fillRect(xx, yy - 9, 14, 10); }
+          else if (kind === 'line') { ctx.fillStyle = col; ctx.fillRect(xx, yy - 5, 14, Math.max(3, parseFloat(st.height) || 3)); }
+          else { ctx.fillStyle = kind === 'tgt' ? cv('--accent') : cv('--ink-2'); for (let k = 0; k < 14; k += 6) ctx.fillRect(xx + k, yy - 5, 4, 2.5); }
+        });
+        text(t, x + 18, rowY, '500 12px ' + fb, cv('--ink-2'));
+        x += w;
+      }
+      y = rowY + 8;
+    }
+    const by = y + 6; ops.push(ctx => ctx.drawImage(b.img, pad, by, b.w, b.h)); y = by + b.h;
+  }
+  if (o.legend) {   // the map's colour scale
+    const sws = [...o.legend.querySelectorAll('.sw')], n = sws.length, sw = (W - 2 * pad) / n; y += 12;
+    sws.forEach((e, k) => { const col = getComputedStyle(e.querySelector('i')).backgroundColor, t = e.querySelector('span').textContent, x0 = pad + k * sw, y0 = y;
+      ops.push(ctx => { ctx.fillStyle = col; ctx.fillRect(x0 + 1, y0, sw - 2, 10); }); text(t, x0 + 1, y0 + 24, '500 11px ' + fm, cv('--ink-2')); });
+    y += 30;
+  }
+  y += 14;
+  for (const line of wrap(o.foot, '500 11.5px ' + fb, W - 2 * pad)) { y += 16; text(line, pad, y, '500 11.5px ' + fb, cv('--muted')); }
+  y += pad;
+  const cvs = document.createElement('canvas'); cvs.width = Math.round(W * scale); cvs.height = Math.round(y * scale);
+  const ctx = cvs.getContext('2d'); ctx.scale(scale, scale); ctx.fillStyle = cv('--surface'); ctx.fillRect(0, 0, W, y);
+  for (const f of ops) f(ctx);
+  blocks.forEach(b => URL.revokeObjectURL(b.url));
+  cvs.toBlob(blob => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = o.name + '.png'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }, 'image/png');
+}
+const srcLine = extra => 'Source: GIE AGSI+ (agsi.gie.eu)' + (extra || '') + ' · Gasfill · data to ' + fmtDay(LAST);
+$('#png-snap').addEventListener('click', () => savePNG({
+  name: 'storage-' + (ST.how === 'map' ? 'map' : 'ranking') + '-' + ST.metric + '-' + ST.date,
+  title: 'Gas storage on ' + fmtDay(ST.date), sub: ($('#map-note').textContent || '').replace(/ Click .*$/, ''),
+  blocks: [{el: ST.how === 'map' ? $('#map') : $('#rank')}], legend: ST.how === 'map' ? $('#map-legend') : null, foot: srcLine(),
+}));
+$('#png-season').addEventListener('click', () => savePNG({
+  name: 'seasonal-' + ST.code + '-' + ST.sKey, title: 'Seasonal curve · ' + cname(ST.code), sub: $('#season-sub').textContent.replace(/^[^·]*· /, ''),
+  blocks: [{el: $('#s-chart'), keyEl: $('#s-key')}], foot: srcLine(),
+}));
+$('#png-ol').addEventListener('click', () => savePNG({
+  name: 'outlook-' + ST.code + '-' + ST.date, title: $('#ol-title').textContent + ' · ' + cname(ST.code), sub: $('#ol-sub').textContent + '. ' + $('#ol-foot').textContent,
+  blocks: [{el: $('#ol-chart'), keyEl: $('#ol-key')}], foot: srcLine('. What-if from past years\' storage changes, not a forecast'),
+}));
+$('#png-hist').addEventListener('click', () => savePNG({
+  name: 'history-' + ST.code + '-' + ST.from + '-' + ST.to, title: 'History · ' + cname(ST.code), sub: fmtDay(ST.from) + ' to ' + fmtDay(ST.to),
+  blocks: [{el: $('#h-fill'), keyEl: $('#h-fill-key'), label: 'Fill level, % of working gas volume'}, {el: $('#h-flow'), keyEl: $('#h-flow-key'), label: 'Net injection / withdrawal, ' + $('#h-flow-sub').textContent},
+    {el: $('#h-lng'), keyEl: $('#h-lng-key'), label: 'LNG send-out, GWh/d, 7-day average'}, {el: $('#h-ttf'), label: 'TTF, EUR/MWh'}],
+  foot: srcLine((hasLNG(ST.code) ? '; LNG: GIE ALSI (alsi.gie.eu)' : '') + '; TTF: ' + (TTF ? TTF.source.replace(/ \(via .*\)$/, '') : 'TTF spot')),
+}));
 
 /* ---------- wiring ---------- */
 function selectCountry(code, scroll) {
   if (!S.series[code]) return;
   ST.code = code; lsSet('code', code);
-  renderChips(); renderTable(); renderSeason(); renderHist();
+  renderChips(); renderTable(); renderOutlook(); renderSeason(); renderHist();
   if (scroll) $('#season').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 function renderAll() {
   if (!S) return;
-  renderKpis(); renderSnapView(); renderTable(); renderChips(); renderSeason(); renderHist();
+  renderKpis(); renderSnapView(); renderInsights(); renderTable(); renderOutlook(); renderChips(); renderSeason(); renderHist();
 }
 let rz = 0;
 window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderAll, 150); });
@@ -875,22 +1284,31 @@ window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(rend
 async function getJSON(url, cache) { const r = await fetch(url, {cache}); if (!r.ok) throw new Error(url + ' HTTP ' + r.status); return r.json(); }
 async function boot() {
   const bust = '?v=' + Math.floor(Date.now() / 600000);   // new data at most every 10 minutes
-  const [st, tf, mp] = await Promise.allSettled([getJSON('data/storage.json' + bust, 'no-cache'), getJSON('data/ttf.json' + bust, 'no-cache'), getJSON('data/countries-map.json?v=1', 'force-cache')]);
+  const [st, tf, mp, ln] = await Promise.allSettled([getJSON('data/storage.json' + bust, 'no-cache'), getJSON('data/ttf.json' + bust, 'no-cache'), getJSON('data/countries-map.json?v=1', 'force-cache'), getJSON('data/lng.json' + bust, 'no-cache')]);
   if (tf.status === 'fulfilled') { TTF = tf.value; $('#ttf-src').textContent = TTF.source + ', ' + TTF.unit + '.'; }
+  if (ln.status === 'fulfilled' && ln.value.series && Object.keys(ln.value.series).length) L = ln.value;
   if (mp.status === 'fulfilled') MAPD = mp.value;
   if (st.status !== 'fulfilled' || !st.value.series || !Object.keys(st.value.series).length) { $('#no-data').hidden = false; return; }
   S = st.value;
-  CO = S.meta.countries.filter(c => S.series[c.code]);
+  for (const [code, s] of Object.entries(S.series)) {   // the last day each series actually has a fill level
+    let i = s.full.length - 1; while (i >= 0 && !ok(s.full[i])) i--;
+    LASTOF[code] = i >= 0 ? addDays(S.start, i) : S.start;
+  }
+  const ALL = S.meta.countries.filter(c => S.series[c.code]);
+  const END = ALL.map(c => LASTOF[c.code]).sort().pop();
+  CO = ALL.filter(c => daysBetween(LASTOF[c.code], END) <= 30);
+  STALE = ALL.filter(c => !CO.includes(c));
   CM = Object.fromEntries(CO.map(c => [c.code, c]));
-  if (!S.series[ST.code]) ST.code = CO[0].code;
+  if (!CO.some(c => c.code === ST.code)) ST.code = CO[0].code;
   FIRST = S.meta.display_from > S.start ? S.meta.display_from : S.start;
-  LAST = S.end;
-  ['#snap', '#tbl', '#season', '#hist'].forEach(id => { $(id).hidden = false; });
+  LAST = END;
+  ['#snap', '#ins-panel', '#tbl', '#outlook', '#season', '#hist'].forEach(id => { $(id).hidden = false; });
   $('#gen-note').textContent = 'Data file built ' + (S.meta.generated || '?') + ' from ' + S.meta.source + '; history fetched from ' + S.start + ' so every day since ' + FIRST + ' has five earlier years to compare with.';
   segInit('#m-metric', ST.metric, v => { ST.metric = v; lsSet('metric', v); renderSnapView(); });
   segInit('#m-how', ST.how, v => { ST.how = v; lsSet('how', v); renderSnapView(); });
   segInit('#s-metric', ST.sKey, v => { ST.sKey = v; lsSet('s-key', v); renderSeason(); });
   segInit('#s-axis', ST.axis, v => { ST.axis = v; lsSet('s-axis', v); ST.years = null; renderSeason(); });
+  segInit('#ol-n', String(OL.n), v => { OL.n = +v; lsSet('ol-n', OL.n); renderOutlook(); });
   renderMeta(); initDate(); initHist(); renderChips();
   setDate(LAST);
   renderHist();
