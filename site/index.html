@@ -182,6 +182,10 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .zp .ev { font-weight: 500; color: var(--muted); }
 .zp.opt { font-family: var(--f-body); font-weight: 600; }
 .lng-none { color: var(--muted); font-size: 13.5px; margin: 4px 0 0; }
+.st-off { color: var(--wdr); font-weight: 600; }
+.st-full { color: var(--accent); font-weight: 600; }
+#tm-ctable tbody tr { cursor: pointer; }
+#tm-ctable tbody tr:hover td { background: var(--surface-2); }
 .whatif { margin: 4px 0 8px; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; color: var(--ink); max-width: none; }
 .whatif b { font-weight: 600; }
 
@@ -325,6 +329,21 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
     <div class="foot"><button class="btn sm" type="button" id="png-fl">Save PNG</button><button class="btn sm" type="button" id="dl-fl">Download CSV</button><span>Season starts: the first day, after the winter low or the autumn peak, of a 14-day run in which the 7-day average net flow keeps the same sign. Grey dates: the day of the top flow, peak or low.</span></div>
   </section>
 
+  <section class="panel" id="terms" hidden>
+    <div class="chart-head"><h2>LNG terminals <span class="sub" id="tm-sub"></span></h2></div>
+    <div class="ctrl"><span class="lbl">Country</span><div class="chips" id="tm-chips"></div></div>
+    <div class="kpis" id="tm-kpis"></div>
+    <h3 class="ph-h3">Terminals <span id="tm-t-sub"></span></h3>
+    <div class="tbl-scroll"><table id="tm-table"><thead></thead><tbody></tbody></table></div>
+    <h3 class="ph-h3">Spare capacity by country <span id="tm-s-sub"></span></h3>
+    <div class="tbl-scroll"><table id="tm-ctable"><thead></thead><tbody></tbody></table></div>
+    <h3 class="ph-h3">Send-out by terminal <span id="tm-c-sub"></span></h3>
+    <div class="ctrl"><div class="presets" id="tm-presets"><button type="button" data-v="3m">3M</button><button type="button" data-v="1y">1Y</button><button type="button" data-v="2y">2Y</button><button type="button" data-v="all">Since 2021</button></div></div>
+    <div class="key" id="tm-key"></div>
+    <div class="chart-wrap" id="tm-chart"></div>
+    <div class="foot"><button class="btn sm" type="button" id="png-tm">Save PNG</button><button class="btn sm" type="button" id="dl-tm">Download CSV</button><span>7-day averages. Capacity is each terminal's declared send-out capacity (ALSI "DTRS").</span></div>
+  </section>
+
   <section class="panel" id="hist" hidden>
     <div class="chart-head"><h2>History <span class="sub" id="hist-sub"></span></h2></div>
     <div class="ctrl" style="justify-content:space-between">
@@ -360,6 +379,7 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
       <li><b>Winter outlook:</b> starts from the chosen day's fill level and adds, day by day, the change in storage of the same calendar days in each past year (gas in storage change divided by that year's working gas volume, so capacity changes don't distort it), kept between 0% and 100%. Each past year gives one path; the chart shows them all, their median and range. From April to September it becomes a refill outlook to 1 December. It is a what-if on past patterns, not a forecast: it doesn't know this winter's weather, prices or LNG supply, and a nearly empty store can't withdraw as fast as a full one.</li>
       <li><b>Injection &amp; withdrawal:</b> injection and withdrawal are AGSI+ daily flows (GWh/d); net flow is injection minus withdrawal. <i>Days left at this pace</i> divides gas in storage (or the gap to 30% or 90%) by the last 7 days' average net flow, so it assumes that pace holds. <i>Cumulative since the season started</i> is the change in gas in storage since the end of 30 September (withdrawal season) or 31 March (injection season), in TWh. A season starts on the first day of a 14-day run in which the centred 7-day average net flow keeps the same sign, searched from the winter low (injection) or the autumn peak (withdrawal), so a short mild spell mid-winter doesn't count. Season totals add up daily injection (April–September) or withdrawal (October–March), so they are gross flows.</li>
       <li><b>Winter so far:</b> compares the change in gas in storage since the chosen start (end of 30 September, end of 31 October, or the day before the country's withdrawal season began) with the same calendar days in each past winter since 2016, as a share of each year's capacity; rank 1 is the biggest drop. <i>Pace vs normal</i> compares the average net flow over those days with the five previous winters. <i>Tracking like</i> starts the winter outlook from the chosen start and names the past winters whose paths stayed closest to what actually happened (smallest average gap). <i>Milestones</i> come from the outlook run from the chosen day, plus a straight-line projection at the last 7 days' pace. Germany's 30% on 1 February is the national rule for winter 2026/27 (Gasspeicherfüllstandsverordnung, in force until 31 March 2027).</li>
+      <li><b>LNG terminals:</b> <a href="https://alsi.gie.eu" target="_blank" rel="noopener">GIE ALSI</a> data for each terminal in Germany, the Netherlands, France and Italy since 2021, as ALSI lists them. <i>Use of capacity</i> is the 7-day average send-out divided by the terminal's declared total reference send-out (DTRS), the capacity the operator declares. <i>Spare</i> is capacity minus send-out: how much more a country could regasify if cargoes arrived; it says nothing about whether cargoes are available. <i>Tank level</i> is LNG in tanks against the declared maximum inventory (DTMI). A terminal counts as idle when its 7-day send-out is below 5% of capacity. Terminals with no data in the last 30 days are left out.</li>
       <li><b>What stands out:</b> automatic notes for the chosen day: records for the calendar day across all years in the data, streaks outside the 5-year range, the fastest 7-day changes for that week of the year, the filling target, the season's peak, TTF and LNG send-out.</li>
       <li><b>TTF:</b> <span id="ttf-src">TTF spot, EUR/MWh</span>.</li>
       <li><b>Map:</b> borders from entsoe-py (MIT) and Natural Earth (public domain). Grey countries aren't tracked yet.</li>
@@ -624,14 +644,14 @@ function setDate(d, opts = {}) {
   $('#d-slider').value = daysBetween(FIRST, d);
   $('#snap-title').textContent = fmtDay(d);
   renderKpis(); renderSnapView(); renderTable();
-  if (!opts.light) { renderInsights(); renderWinter(); renderOutlook(); renderSeason(); renderFlows(); }
+  if (!opts.light) { renderInsights(); renderWinter(); renderOutlook(); renderSeason(); renderFlows(); renderTerms(); }
 }
 function initDate() {
   const sl = $('#d-slider'), inp = $('#d-input');
   sl.max = daysBetween(FIRST, LAST); inp.min = FIRST; inp.max = LAST;
   let raf = 0;
   sl.addEventListener('input', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => setDate(addDays(FIRST, +sl.value), {light: true})); });
-  sl.addEventListener('change', () => { renderInsights(); renderWinter(); renderOutlook(); renderSeason(); renderFlows(); });
+  sl.addEventListener('change', () => { renderInsights(); renderWinter(); renderOutlook(); renderSeason(); renderFlows(); renderTerms(); });
   inp.addEventListener('change', () => { if (inp.value) setDate(inp.value); });
   $('#d-prev').addEventListener('click', () => setDate(addDays(ST.date, -1)));
   $('#d-next').addEventListener('click', () => setDate(addDays(ST.date, 1)));
@@ -649,7 +669,7 @@ function initDate() {
   }
   $('#d-ticks').innerHTML = ticks.join('');
 }
-function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; } $('#d-play').textContent = '▶ Play'; renderInsights(); renderWinter(); renderOutlook(); renderSeason(); renderFlows(); }
+function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; } $('#d-play').textContent = '▶ Play'; renderInsights(); renderWinter(); renderOutlook(); renderSeason(); renderFlows(); renderTerms(); }
 
 /* ---------- map and ranking ---------- */
 const FULL_BREAKS = [10, 20, 30, 40, 50, 60, 70, 80, 90];
@@ -1479,6 +1499,136 @@ $('#dl-fl').addEventListener('click', () => {
     .concat(st.map(r => [r.label, r.start, r.injStart, r.injected, r.maxInj && r.maxInj.v, r.maxInj && r.maxInj.d, r.peak && r.peak.v, r.peak && r.peak.d, r.wdrStart, r.withdrawn, r.maxWdr && r.maxWdr.v, r.maxWdr && r.maxWdr.d, r.low && r.low.v, r.low && r.low.d, r.partInj || r.partWdr ? 'yes' : ''])));
 });
 
+/* ---------- LNG terminals ---------- */
+let TM = null;   // lng_terminals.json
+const TMS = {code: null, preset: lsGet('tm-preset', '1y')};
+function tval(id, key, d) {
+  const s = TM.series[id]; if (!s || !s[key]) return null;
+  const i = daysBetween(TM.start, d);
+  return i >= 0 && i < s[key].length ? s[key][i] : null;
+}
+function tlast(id, key, d) { for (let j = 0; j < 30; j++) { const v = tval(id, key, addDays(d, -j)); if (ok(v)) return v; } return null; }
+function termsOf(cc) {   // active terminals of a country, largest capacity first
+  if (!TM) return [];
+  return TM.meta.terminals.filter(t => t.country === cc && TM.series[t.id] && daysBetween(TM.series[t.id].last, TM.end) <= 30)
+    .map(t => ({...t, cap: tlast(t.id, 'dtrs', TM.end) || 0})).sort((a, b) => b.cap - a.cap);
+}
+const termCountries = () => TM ? [...new Set(TM.meta.terminals.map(t => t.country))].filter(cc => termsOf(cc).length) : [];
+function termRow(t, d) {
+  const so7 = mean(x => tval(t.id, 'sendOut', x), d, 7), cap = tlast(t.id, 'dtrs', d), ly = mean(x => tval(t.id, 'sendOut', x), yearsAgo(d, 1), 7);
+  const inv = tlast(t.id, 'inv', d), mx = tlast(t.id, 'dtmi', d);
+  let idle = 0; for (let j = 0; j < 30; j++) { const v = tval(t.id, 'sendOut', addDays(d, -j)); if (ok(v) && ok(cap) && cap > 0 && v <= 0.05 * cap) idle++; }
+  const use = ok(so7) && ok(cap) && cap > 0 ? so7 / cap * 100 : null;
+  return {t, so7, cap, use, ly, tank: ok(inv) && ok(mx) && mx > 0 ? inv / mx * 100 : null, idle,
+    status: !ok(use) ? '–' : use < 5 ? 'idle' : use >= 90 ? 'near full' : 'running'};
+}
+function countrySpare(cc, d) {
+  const rows = termsOf(cc).map(t => termRow(t, d));
+  const sum = k => rows.reduce((a, r) => a + (ok(r[k]) ? r[k] : 0), 0);
+  const cap = sum('cap'), so = sum('so7'), ly = rows.some(r => ok(r.ly)) ? sum('ly') : null;
+  return {cc, rows, cap, so, ly, spare: cap - so, use: cap > 0 ? so / cap * 100 : null};
+}
+function stackPlot(box, o) {   // stacked areas with a crosshair; o.layers [{name, vals, color}], o.line {name, vals}
+  const W = Math.max(300, box.clientWidth || 640), H = o.H || 280, padL = 56, padR = 16, padT = 20, padB = 26;
+  const n = Math.max(2, o.n), iw = W - padL - padR, ih = H - padT - padB, x = i => padL + i / (n - 1) * iw;
+  const tops = Array.from({length: n}, (_, i) => o.layers.reduce((a, l) => a + (ok(l.vals[i]) ? Math.max(0, l.vals[i]) : 0), 0));
+  let hi = Math.max(1, ...tops, ...(o.line ? o.line.vals.filter(ok) : []));
+  const step = niceStep(hi, 5); hi = Math.ceil(hi / step) * step;
+  const y = v => padT + (hi - v) / hi * ih;
+  let s = '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(o.aria || 'Stacked chart') + '">';
+  for (let t = 0; t <= hi + 1e-9; t += step) { const yy = y(t).toFixed(1); s += '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + yy + '" y2="' + yy + '" stroke="var(--line)"/><text x="' + (padL - 8) + '" y="' + (+yy + 4) + '" text-anchor="end" font-size="11" fill="var(--muted)">' + fmtN(t, 0).replace(/,/g, ' ') + '</text>'; }
+  if (o.unit) s += '<text x="' + (padL - 8) + '" y="' + (padT - 7) + '" text-anchor="end" font-size="11" fill="var(--muted)">' + esc(o.unit) + '</text>';
+  { let lastX = -Infinity; for (const [i, lab] of o.xTicks || []) { const tx = x(i), need = lab.length * 6.6 + 10; if (tx - lastX < need || tx > W - padR - need / 2 + 6) continue; lastX = tx;
+      s += '<line x1="' + tx.toFixed(1) + '" x2="' + tx.toFixed(1) + '" y1="' + (H - padB) + '" y2="' + (H - padB + 4) + '" stroke="var(--line-strong)"/><text x="' + tx.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="11" fill="var(--muted)">' + esc(lab) + '</text>'; } }
+  const base = new Array(n).fill(0);
+  for (const l of o.layers) {
+    const top = base.map((b, i) => b + (ok(l.vals[i]) ? Math.max(0, l.vals[i]) : 0));
+    let d = 'M' + x(0).toFixed(1) + ',' + y(top[0]).toFixed(1);
+    for (let i = 1; i < n; i++) d += 'L' + x(i).toFixed(1) + ',' + y(top[i]).toFixed(1);
+    for (let i = n - 1; i >= 0; i--) d += 'L' + x(i).toFixed(1) + ',' + y(base[i]).toFixed(1);
+    s += '<path d="' + d + 'Z" fill="' + l.color + '" stroke="var(--surface)" stroke-width="1" stroke-linejoin="round"/>';
+    for (let i = 0; i < n; i++) base[i] = top[i];
+  }
+  if (o.line) {
+    let d = '', pen = false;
+    o.line.vals.forEach((v, i) => { if (!ok(v)) { pen = false; return; } d += (pen ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(v).toFixed(1); pen = true; });
+    s += '<path d="' + d + '" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="6 4"/>';
+  }
+  s += '<line class="xh" x1="0" x2="0" y1="' + padT + '" y2="' + (H - padB) + '" stroke="var(--ink-2)" visibility="hidden" pointer-events="none"/>';
+  s += '<rect class="hit" x="' + padL + '" y="' + padT + '" width="' + iw + '" height="' + ih + '" fill="transparent"/></svg><div class="tip"></div>';
+  box.innerHTML = s;
+  const hit = box.querySelector('.hit'), xh = box.querySelector('.xh'), tip = box.querySelector('.tip');
+  hit.addEventListener('pointermove', e => {
+    const i = Math.max(0, Math.min(n - 1, Math.round((e.clientX - box.getBoundingClientRect().left - padL) / iw * (n - 1)))), xx = x(i);
+    xh.setAttribute('x1', xx); xh.setAttribute('x2', xx); xh.setAttribute('visibility', 'visible');
+    tip.innerHTML = o.tip(i); tip.style.display = 'block';
+    const tw = tip.offsetWidth || 180; tip.style.left = Math.min(Math.max(xx, tw / 2 + 4), W - tw / 2 - 4) + 'px'; tip.style.top = (padT + 4) + 'px'; tip.style.transform = 'translate(-50%, 0)';
+  });
+  hit.addEventListener('pointerleave', () => { tip.style.display = 'none'; xh.setAttribute('visibility', 'hidden'); });
+}
+const shortName = nm => String(nm).replace(/\b(LNG|terminal|Terminal|GNL|S\.p\.A\.|GmbH|B\.V\.)\b/g, '').replace(/\s+/g, ' ').replace(/^[\s\-–]+|[\s\-–,]+$/g, '') || nm;
+function renderTerms() {
+  if (!S || !TM) return;
+  const ccs = termCountries(); if (!ccs.length) return;
+  const cc = ccs.includes(ST.code) ? ST.code : (TMS.code && ccs.includes(TMS.code) ? TMS.code : ccs[0]); TMS.code = cc;
+  const d = ST.date > TM.end ? TM.end : ST.date;
+  $('#tm-chips').innerHTML = ccs.map(c => '<button type="button" class="zp" data-c="' + c + '" aria-pressed="' + (c === cc) + '"><i style="background:var(--ink)"></i>' + esc(c) + '</button>').join('');
+  $('#tm-chips').querySelectorAll('.zp').forEach(b => b.addEventListener('click', () => { TMS.code = b.dataset.c; if (CM[b.dataset.c]) selectCountry(b.dataset.c, false); else renderTerms(); }));
+  const C = countrySpare(cc, d);
+  $('#tm-sub').textContent = (CM[cc] ? CM[cc].name : cc) + ' · 7 days to ' + fmtDay(d) + ' · ' + C.rows.length + ' terminals';
+  $('#tm-kpis').innerHTML = [
+    ['Declared capacity', fmtN(C.cap, 0) + '<small>GWh/d</small>', C.rows.length + ' terminals · ' + fmtN(C.cap / 1000, 2) + ' TWh/d'],
+    ['Send-out, 7 days', fmtN(C.so, 0) + '<small>GWh/d</small>', fmtN(C.use, 0) + '% of capacity'],
+    ['Spare', fmtN(C.spare, 0) + '<small>GWh/d</small>', 'room for more LNG if cargoes arrive'],
+    ['vs last year', ok(C.ly) && C.ly > 0 ? fmtS((C.so / C.ly - 1) * 100, 0) + '<small>%</small>' : '–', ok(C.ly) ? 'same week last year ' + fmtN(C.ly, 0) + ' GWh/d' : ''],
+  ].map(([l, v, s2]) => '<div class="kpi"><span class="l">' + esc(l) + '</span><span class="v">' + v + '</span><span class="s">' + esc(s2) + '</span></div>').join('');
+  // terminal table
+  $('#tm-t-sub').textContent = 'largest capacity first';
+  const colour = new Map(C.rows.map((r, k) => [r.t.id, 'var(--s' + (k % 8 + 1) + ')']));
+  $('#tm-table thead').innerHTML = '<tr><th>Terminal</th><th>Operator</th><th class="num">Send-out<small>GWh/d, 7-day</small></th><th class="num">Capacity<small>GWh/d</small></th><th class="num">Use<small>%</small></th><th class="num">Spare<small>GWh/d</small></th><th class="num">Tank level<small>% of max</small></th><th class="num">Last year<small>GWh/d, same week</small></th><th class="num">Idle days<small>last 30</small></th><th>Status</th></tr>';
+  $('#tm-table tbody').innerHTML = C.rows.map(r => '<tr><td class="nm"><i style="display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:8px;vertical-align:middle;background:' + colour.get(r.t.id) + '"></i>' + esc(shortName(r.t.name)) + '</td><td>' + esc(r.t.company_name || '') + '</td>' +
+    '<td class="num">' + fmtN(r.so7, 0) + '</td><td class="num">' + fmtN(r.cap, 0) + '</td><td class="num">' + fmtN(r.use, 0) + '</td><td class="num">' + (ok(r.cap) && ok(r.so7) ? fmtN(r.cap - r.so7, 0) : '–') + '</td>' +
+    '<td class="num">' + fmtN(r.tank, 0) + '</td><td class="num">' + fmtN(r.ly, 0) + '</td><td class="num">' + r.idle + '</td>' +
+    '<td class="' + (r.status === 'idle' ? 'st-off' : r.status === 'near full' ? 'st-full' : '') + '">' + r.status + '</td></tr>').join('') +
+    '<tr class="agg"><td>Total</td><td></td><td class="num">' + fmtN(C.so, 0) + '</td><td class="num">' + fmtN(C.cap, 0) + '</td><td class="num">' + fmtN(C.use, 0) + '</td><td class="num">' + fmtN(C.spare, 0) + '</td><td></td><td class="num">' + fmtN(C.ly, 0) + '</td><td></td><td></td></tr>';
+  // spare capacity by country
+  $('#tm-s-sub').textContent = '7 days to ' + fmtDay(d);
+  const all = ccs.map(c => countrySpare(c, d));
+  $('#tm-ctable thead').innerHTML = '<tr><th>Country</th><th class="num">Terminals</th><th class="num">Capacity<small>GWh/d</small></th><th class="num">Send-out<small>GWh/d</small></th><th class="num">Use<small>%</small></th><th class="num">Spare<small>GWh/d</small></th><th class="num">Spare<small>TWh/d</small></th><th class="num">vs last year<small>send-out</small></th></tr>';
+  $('#tm-ctable tbody').innerHTML = all.map(q => '<tr data-c="' + q.cc + '" class="' + (q.cc === cc ? 'sel' : '') + '"><td>' + esc(q.cc) + (CM[q.cc] ? ' · ' + esc(CM[q.cc].name) : '') + '</td><td class="num">' + q.rows.length + '</td><td class="num">' + fmtN(q.cap, 0) + '</td><td class="num">' + fmtN(q.so, 0) + '</td><td class="num">' + fmtN(q.use, 0) + '</td><td class="num">' + fmtN(q.spare, 0) + '</td><td class="num">' + fmtN(q.spare / 1000, 2) + '</td><td class="num">' + (ok(q.ly) && q.ly > 0 ? fmtS((q.so / q.ly - 1) * 100, 0) + '%' : '–') + '</td></tr>').join('') +
+    (() => { const tc = all.reduce((a, q) => a + q.cap, 0), ts = all.reduce((a, q) => a + q.so, 0); return '<tr class="agg"><td>Total</td><td class="num">' + all.reduce((a, q) => a + q.rows.length, 0) + '</td><td class="num">' + fmtN(tc, 0) + '</td><td class="num">' + fmtN(ts, 0) + '</td><td class="num">' + fmtN(ts / tc * 100, 0) + '</td><td class="num">' + fmtN(tc - ts, 0) + '</td><td class="num">' + fmtN((tc - ts) / 1000, 2) + '</td><td></td></tr>'; })();
+  $('#tm-ctable tbody').querySelectorAll('tr[data-c]').forEach(tr => tr.addEventListener('click', () => { TMS.code = tr.dataset.c; if (CM[tr.dataset.c]) selectCountry(tr.dataset.c, false); else renderTerms(); }));
+  // stacked send-out
+  $('#tm-presets').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === TMS.preset ? 'true' : 'false'));
+  const to = d, from0 = TMS.preset === '3m' ? addDays(to, -91) : TMS.preset === '1y' ? addDays(to, -365) : TMS.preset === '2y' ? addDays(to, -730) : TM.start;
+  const from = from0 < TM.start ? TM.start : from0, n = daysBetween(from, to) + 1, days = Array.from({length: n}, (_, i) => addDays(from, i));
+  const layers = C.rows.map(r => ({name: shortName(r.t.name), id: r.t.id, color: colour.get(r.t.id), vals: days.map(x => mean(y2 => tval(r.t.id, 'sendOut', y2), x, 7))}));
+  const capLine = days.map(x => C.rows.reduce((a, r) => a + (tlast(r.t.id, 'dtrs', x) || 0), 0) || null);
+  $('#tm-c-sub').textContent = (CM[cc] ? CM[cc].name : cc) + ' · GWh/d, 7-day average · ' + fmtDay(from) + ' to ' + fmtDay(to);
+  $('#tm-key').innerHTML = layers.map(l => '<span><i class="box" style="background:' + l.color + '"></i>' + esc(l.name) + '</span>').join('') + '<span><i class="dash" style="background:repeating-linear-gradient(90deg, var(--ink) 0 6px, transparent 6px 10px)"></i>Declared capacity</span>';
+  stackPlot($('#tm-chart'), {
+    n, layers, line: {name: 'Capacity', vals: capLine}, unit: 'GWh/d', xTicks: timeTicks(from, n), H: ($('#tm-chart').clientWidth || 600) < 520 ? 240 : 300,
+    aria: 'LNG send-out by terminal, ' + cc,
+    tip: i => { const tot = layers.reduce((a, l) => a + (ok(l.vals[i]) ? l.vals[i] : 0), 0);
+      return '<b>' + fmtDay(days[i]) + '</b><br>Total <b>' + fmtN(tot, 0) + '</b> GWh/d' + (ok(capLine[i]) ? ' <span class="mut">of ' + fmtN(capLine[i], 0) + ' (' + fmtN(tot / capLine[i] * 100, 0) + '%)</span>' : '') +
+        layers.slice().sort((a, b) => (b.vals[i] || 0) - (a.vals[i] || 0)).map(l => '<br>' + swatch(l.color) + esc(l.name) + ' <b>' + fmtN(l.vals[i], 0) + '</b>').join(''); },
+  });
+}
+$('#tm-presets').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; TMS.preset = b.dataset.v; lsSet('tm-preset', TMS.preset); renderTerms(); });
+$('#png-tm').addEventListener('click', () => savePNG({
+  name: 'lng-terminals-' + TMS.code + '-' + TMS.preset, title: 'LNG send-out by terminal · ' + (CM[TMS.code] ? CM[TMS.code].name : TMS.code), sub: $('#tm-c-sub').textContent.replace(/^[^·]*· /, ''),
+  blocks: [{el: $('#tm-chart'), keyEl: $('#tm-key')}], foot: 'Source: GIE ALSI (alsi.gie.eu), terminal data · Gasfill · data to ' + fmtDay(TM.end),
+}));
+$('#dl-tm').addEventListener('click', () => {
+  const cc = TMS.code, rowsT = termsOf(cc), d = ST.date > TM.end ? TM.end : ST.date, from = TMS.preset === 'all' ? TM.start : addDays(d, TMS.preset === '3m' ? -91 : TMS.preset === '1y' ? -365 : -730);
+  const out = [['date', 'country', 'terminal', 'operator', 'sendout_gwh_d', 'sendout_7d_avg_gwh_d', 'capacity_dtrs_gwh_d', 'in_tanks_gwh', 'max_inventory_gwh', 'status']];
+  for (let t = from < TM.start ? TM.start : from; t <= d; t = addDays(t, 1)) for (const r of rowsT) {
+    const s = TM.series[r.id], i = daysBetween(TM.start, t);
+    out.push([t, cc, r.name, r.company_name, tval(r.id, 'sendOut', t), mean(x => tval(r.id, 'sendOut', x), t, 7), tval(r.id, 'dtrs', t), tval(r.id, 'inv', t), tval(r.id, 'dtmi', t), s.status[i] || '']);
+  }
+  saveCSV('lng-terminals-' + cc + '-' + d + '.csv', out);
+});
+
 /* ---------- what stands out ---------- */
 const nb = (v, d = 1, u = '') => '<b class="n">' + v + u + '</b>';
 function sameDay(code, key, d, getter = val) {   // value on the same calendar day in every earlier year
@@ -1691,12 +1841,12 @@ $('#png-hist').addEventListener('click', () => savePNG({
 function selectCountry(code, scroll) {
   if (!S.series[code]) return;
   ST.code = code; lsSet('code', code);
-  renderChips(); renderTable(); renderWinter(); renderOutlook(); renderSeason(); renderFlows(); renderHist();
+  renderChips(); renderTable(); renderWinter(); renderOutlook(); renderSeason(); renderFlows(); renderTerms(); renderHist();
   if (scroll) $('#season').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 function renderAll() {
   if (!S) return;
-  renderKpis(); renderSnapView(); renderInsights(); renderTable(); renderWinter(); renderOutlook(); renderChips(); renderSeason(); renderFlows(); renderHist();
+  renderKpis(); renderSnapView(); renderInsights(); renderTable(); renderWinter(); renderOutlook(); renderChips(); renderSeason(); renderFlows(); renderTerms(); renderHist();
 }
 let rz = 0;
 window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderAll, 150); });
@@ -1704,9 +1854,10 @@ window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(rend
 async function getJSON(url, cache) { const r = await fetch(url, {cache}); if (!r.ok) throw new Error(url + ' HTTP ' + r.status); return r.json(); }
 async function boot() {
   const bust = '?v=' + Math.floor(Date.now() / 600000);   // new data at most every 10 minutes
-  const [st, tf, mp, ln] = await Promise.allSettled([getJSON('data/storage.json' + bust, 'no-cache'), getJSON('data/ttf.json' + bust, 'no-cache'), getJSON('data/countries-map.json?v=1', 'force-cache'), getJSON('data/lng.json' + bust, 'no-cache')]);
+  const [st, tf, mp, ln, tm] = await Promise.allSettled([getJSON('data/storage.json' + bust, 'no-cache'), getJSON('data/ttf.json' + bust, 'no-cache'), getJSON('data/countries-map.json?v=1', 'force-cache'), getJSON('data/lng.json' + bust, 'no-cache'), getJSON('data/lng_terminals.json' + bust, 'no-cache')]);
   if (tf.status === 'fulfilled') { TTF = tf.value; $('#ttf-src').textContent = TTF.source + ', ' + TTF.unit + '.'; }
   if (ln.status === 'fulfilled' && ln.value.series && Object.keys(ln.value.series).length) L = ln.value;
+  if (tm.status === 'fulfilled' && tm.value.series && Object.keys(tm.value.series).length) TM = tm.value;
   if (mp.status === 'fulfilled') MAPD = mp.value;
   if (st.status !== 'fulfilled' || !st.value.series || !Object.keys(st.value.series).length) { $('#no-data').hidden = false; return; }
   S = st.value;
@@ -1723,6 +1874,7 @@ async function boot() {
   FIRST = S.meta.display_from > S.start ? S.meta.display_from : S.start;
   LAST = END;
   ['#snap', '#ins-panel', '#tbl', '#winter', '#outlook', '#season', '#flows', '#hist'].forEach(id => { $(id).hidden = false; });
+  if (TM) $('#terms').hidden = false;
   $('#gen-note').textContent = 'Data file built ' + (S.meta.generated || '?') + ' from ' + S.meta.source + '; history fetched from ' + S.start + ' so every day since ' + FIRST + ' has five earlier years to compare with.';
   segInit('#m-metric', ST.metric, v => { ST.metric = v; lsSet('metric', v); renderSnapView(); });
   segInit('#m-how', ST.how, v => { ST.how = v; lsSet('how', v); renderSnapView(); });

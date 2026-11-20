@@ -307,9 +307,12 @@ def walk_listing(js):
             if node.get("eic") and isinstance(facs, list):
                 ccomp = code_of(node) or cc
                 for f in facs:
-                    if isinstance(f, dict) and f.get("eic") and f["eic"] not in seen:
-                        seen.add(f["eic"])
-                        out.append({"id": f["eic"], "company": node["eic"], "name": str(f.get("name") or f["eic"]).strip(),
+                    # the same terminal code can appear under two operators (e.g. after a change of
+                    # operator), so a terminal is identified by operator and terminal code together
+                    tid = node["eic"] + ":" + str(f.get("eic"))
+                    if isinstance(f, dict) and f.get("eic") and tid not in seen:
+                        seen.add(tid)
+                        out.append({"id": tid, "facility": f["eic"], "company": node["eic"], "name": str(f.get("name") or f["eic"]).strip(),
                                     "company_name": str(node.get("short_name") or node.get("name") or "").strip(),
                                     "country": code_of(f) or ccomp})
                 return
@@ -360,7 +363,7 @@ def run_terminals(cfg, key, full):
         rep_days = [d for d, r in have.items() if r.get("sendOut") is not None or r.get("inv") is not None]
         start = start0 if full or not rep_days else max(start0, (dt.date.fromisoformat(max(rep_days)) - dt.timedelta(days=int(cfg["refresh_days"]))).isoformat())
         try:
-            rows = fetch_range(ds, {"country": t["country"], "company": t["company"], "facility": t["id"]}, start, today, key, show_sample=not sampled)
+            rows = fetch_range(ds, {"country": t["country"], "company": t["company"], "facility": t["facility"]}, start, today, key, show_sample=not sampled)
             sampled = True
         except RuntimeError as e:
             print(f"::warning::terminal {t['name']}: {e}")

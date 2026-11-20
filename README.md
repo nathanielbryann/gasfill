@@ -8,8 +8,11 @@ its legend and source line. Data: [GIE AGSI+](https://agsi.gie.eu) and [GIE ALSI
 Same look as Spotrank, but no game.
 
 - `site/` is the website (GitHub Pages). One file, `site/index.html`, no libraries.
-- `site/data/storage.json` holds the daily AGSI+ data and `site/data/lng.json` the ALSI LNG data,
-  both written by `scripts/fetch_gie.py` (one script, one API key for both platforms).
+- `site/data/storage.json` holds the daily AGSI+ data, `site/data/lng.json` the ALSI LNG data by
+  country and `site/data/lng_terminals.json` the ALSI data for each terminal (countries and start
+  year under `terminals` in `config.json`), all written by `scripts/fetch_gie.py` (one script, one API
+  key for both platforms). Terminals come from ALSI's own listing (`about?show=listing`), so a new
+  terminal appears without code changes.
 - `site/data/ttf.json` holds TTF, written by `scripts/fetch_ttf.py`.
 - `site/data/countries-map.json` holds the map shapes for every European country (`scripts/build_map.py`, run once).
 - `config.json` lists the countries and dates.

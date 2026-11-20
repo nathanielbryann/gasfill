@@ -83,9 +83,13 @@ def test_listing():
                                          "facilities": [{"name": "Wilhelmshaven 1", "eic": "W1"}, {"name": "Brunsbuettel", "eic": "BR"}]}],
                                   "NL": [{"name": "Gate terminal", "eic": "21X-GATE", "facilities": [{"name": "Rotterdam Gate", "eic": "GATE", "country": {"code": "NL"}}]}]}}}
     t = fg.walk_listing(nested)
-    assert [(x["id"], x["country"], x["company"]) for x in t] == [("W1", "DE", "37X-DET"), ("BR", "DE", "37X-DET"), ("GATE", "NL", "21X-GATE")], t
+    assert [(x["facility"], x["country"], x["company"]) for x in t] == [("W1", "DE", "37X-DET"), ("BR", "DE", "37X-DET"), ("GATE", "NL", "21X-GATE")], t
+    # the same terminal under two operators is kept twice
+    two = {"IT": [{"eic": "OLD", "name": "GNL Italia", "facilities": [{"eic": "PAN", "name": "Panigaglia (historical)"}]},
+                  {"eic": "NEW", "name": "SNAM LNG", "facilities": [{"eic": "PAN", "name": "Panigaglia"}]}]}
+    assert [x["id"] for x in fg.walk_listing(two)] == ["OLD:PAN", "NEW:PAN"]
     flat = [{"eic": "C1", "name": "Op", "country": "FR", "facilities": [{"eic": "F1", "name": "Dunkerque"}]}]
-    assert fg.walk_listing(flat) == [{"id": "F1", "company": "C1", "name": "Dunkerque", "company_name": "Op", "country": "FR"}]
+    assert fg.walk_listing(flat) == [{"id": "C1:F1", "facility": "F1", "company": "C1", "name": "Dunkerque", "company_name": "Op", "country": "FR"}]
     print("listing tests passed")
 
 
