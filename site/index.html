@@ -182,6 +182,8 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .zp .ev { font-weight: 500; color: var(--muted); }
 .zp.opt { font-family: var(--f-body); font-weight: 600; }
 .lng-none { color: var(--muted); font-size: 13.5px; margin: 4px 0 0; }
+.whatif { margin: 4px 0 8px; padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; color: var(--ink); max-width: none; }
+.whatif b { font-weight: 600; }
 
 /* Method */
 .data p, .data li { font-size: 13.5px; color: var(--ink-2); max-width: 84ch; overflow-wrap: anywhere; }
@@ -261,7 +263,8 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
       <h3 class="ph-h3">All countries <span id="ws-t-sub"></span></h3>
       <div class="tbl-scroll"><table id="ws-table"><thead></thead><tbody></tbody></table></div>
       <h3 class="ph-h3">Tracking against past winters <span id="ws-c-sub"></span></h3>
-      <div class="ctrl"><span class="lbl">Past winters</span><div class="chips" id="ws-years"></div></div>
+      <p class="sub-p whatif" id="ws-note"></p>
+      <div class="ctrl"><span class="lbl">What-if, like</span><div class="chips" id="ws-years"></div></div>
       <div class="key" id="ws-key"></div>
       <div class="chart-wrap" id="ws-chart"></div>
       <h3 class="ph-h3">Milestones ahead <span id="ws-m-sub"></span></h3>
@@ -273,6 +276,7 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
   <section class="panel" id="outlook" hidden>
     <div class="chart-head"><h2><span id="ol-title">Winter outlook</span> <span class="sub" id="ol-sub"></span></h2></div>
     <p class="sub-p" id="ol-intro"></p>
+    <p class="sub-p whatif" id="ol-note"></p>
     <div class="ctrl" style="margin-top:10px">
       <span class="lbl">Country</span><div class="chips" id="ol-chips"></div>
       <div class="seg seg-sm push" id="ol-n" role="group" aria-label="Past years used"><button type="button" data-v="5">Last 5 years</button><button type="button" data-v="10">Since 2016</button></div>
@@ -1061,15 +1065,15 @@ function renderOutlook() {
     const sel = new Set(OL.sel), low = R.ends[0], high = R.ends[R.ends.length - 1];
     const ext = OL.ext && R.paths.length > 1, line = q => Array.from({length: N}, (_, i) => at(q.p, i));
     const series = R.paths.filter(q => !sel.has(q.y0) && !(ext && (q === low || q === high))).map(q => ({name: q.label, vals: line(q), color: 'var(--line-strong)', width: 1, noDot: true}));
-    if (ext && !sel.has(high.y0)) series.push({name: 'like ' + high.label, vals: line(high), color: 'var(--inj)', width: 1.5, noDot: true, endLabel: high.label + ' ' + endTxt(high)});
-    if (ext && !sel.has(low.y0)) series.push({name: 'like ' + low.label, vals: line(low), color: 'var(--wdr)', width: 1.5, noDot: true, endLabel: low.label + ' ' + endTxt(low)});
+    if (ext && !sel.has(high.y0)) series.push({name: 'like ' + high.label, vals: line(high), color: 'var(--inj)', width: 1.5, noDot: true, endLabel: 'like ' + high.label + ' ' + endTxt(high)});
+    if (ext && !sel.has(low.y0)) series.push({name: 'like ' + low.label, vals: line(low), color: 'var(--wdr)', width: 1.5, noDot: true, endLabel: 'like ' + low.label + ' ' + endTxt(low)});
     const picked = R.paths.filter(q => sel.has(q.y0)).sort((a, b) => a.y0 - b.y0), pc = pickColours(picked.map(q => q.y0));
     OL.colours = pc;
     const colOf = y => pc.get(y) || yearColour(y);
-    for (const q of picked) series.push({name: 'like ' + q.label, vals: line(q), color: colOf(q.y0), width: 2.25, endLabel: q.label + ' ' + endTxt(q)});
+    for (const q of picked) series.push({name: 'like ' + q.label, vals: line(q), color: colOf(q.y0), width: 2.25, endLabel: 'like ' + q.label + ' ' + endTxt(q)});
     // year picker: one chip per past season, with where it ends
     const yrs = R.paths.slice().sort((a, b) => a.y0 - b.y0);
-    $('#ol-y-lbl').textContent = winter ? 'Past winters' : 'Past years';
+    $('#ol-y-lbl').textContent = 'What-if, like';
     $('#ol-years').innerHTML = yrs.map(q => '<button type="button" class="zp" data-y="' + q.y0 + '" aria-pressed="' + sel.has(q.y0) + '" title="Show the path like ' + q.label + '"><i style="background:' + colOf(q.y0) + '"></i>' + q.label + ' <span class="ev">' + endTxt(q) + '</span></button>').join('') +
       '<button type="button" class="zp opt" data-y="ext" aria-pressed="' + OL.ext + '">Lowest &amp; highest</button><button type="button" class="zp opt" data-y="all" aria-pressed="false">All</button><button type="button" class="zp opt" data-y="none" aria-pressed="false">None</button>';
     $('#ol-years').querySelectorAll('.zp').forEach(b => b.addEventListener('click', () => {
@@ -1092,11 +1096,12 @@ function renderOutlook() {
     }
     $('#ol-sub').textContent = cname(code) + ' · from ' + fmtDay(R.d) + ' (' + fmtN(R.f0, 1) + '%) · ' + R.paths.length + ' past ' + (winter ? 'winters' : 'years');
     $('#ol-key').innerHTML = '<span><i style="background:var(--ink);height:4px"></i>Actual</span><span><i class="dash"></i>Median of past years</span><span><i class="box" style="background:var(--band)"></i>Range</span>' +
-      '<span><i style="background:var(--line-strong)"></i>One past ' + (winter ? 'winter' : 'year') + ' each</span>' + (ext ? '<span><i style="background:var(--wdr)"></i>Lowest end</span><span><i style="background:var(--inj)"></i>Highest end</span>' : '') +
-      picked.map(q => '<span><i style="background:' + colOf(q.y0) + ';height:3px"></i>Like ' + q.label + '</span>').join('') +
+      '<span><i style="background:var(--line-strong)"></i>What-if, one per past ' + (winter ? 'winter' : 'year') + '</span>' + (ext ? '<span><i style="background:var(--wdr)"></i>Lowest end</span><span><i style="background:var(--inj)"></i>Highest end</span>' : '') +
+      picked.map(q => '<span><i style="background:' + colOf(q.y0) + ';height:3px"></i>What-if like ' + q.label + '</span>').join('') +
       (refs.length ? '<span><i class="tgt"></i>90% target</span>' : '');
+    $('#ol-note').innerHTML = whatIfNote(code, R, picked[0] || low, winter);
     plot($('#ol-chart'), {
-      n: N, series, band: {lo: dates.map((_, i) => at(R.lo, i)), hi: dates.map((_, i) => at(R.hi, i))}, xTicks: ticks, unit: '%', clamp: [0, 100], padR: R.paths.some(q => q.empty) ? 132 : 92,
+      n: N, series, band: {lo: dates.map((_, i) => at(R.lo, i)), hi: dates.map((_, i) => at(R.hi, i))}, xTicks: ticks, unit: '%', clamp: [0, 100], padR: R.paths.some(q => q.empty) ? 160 : 122,
       vlines: [{i: pre, label: fmtDM(R.d)}], shades, refs, H: ($('#ol-chart').clientWidth || 600) < 520 ? 250 : 320,
       aria: 'Storage outlook for ' + cname(code),
       tip: i => {
@@ -1150,6 +1155,15 @@ $('#dl-ol').addEventListener('click', () => {
   for (let i = 0; i <= R.n; i++) { const t = addDays(R.d, i); rows.push([t, t <= LAST ? val(R.code, 'full', t) : null, R.med[i], R.lo[i], R.hi[i]].concat(R.paths.map(q => q.p[i]))); }
   saveCSV('outlook-' + R.code + '-from-' + R.d + '.csv', rows);
 });
+
+/* the "like 20xx/yy" lines are what-ifs; say so with a worked example */
+function whatIfNote(code, R, q, winter) {
+  const k = q.k, a = yearsAgo(R.d, k), b = yearsAgo(R.H.end, k), fa = val(code, 'full', a), fb = val(code, 'full', b);
+  const what = winter ? 'winter' : 'year';
+  let t = '<b>The coloured lines are what-ifs, not the levels those ' + what + 's actually had.</b> Each starts from this ' + what + '\'s level (' + fmtN(R.f0, 1) + '% on ' + fmtDM(R.d) + ') and repeats, day by day, how storage changed in that past ' + what + '.';
+  if (ok(fa) && ok(fb)) t += ' Example: in ' + q.label + ', ' + esc(cname(code)) + ' storage really went from ' + fmtN(fa, 1) + '% (' + fmtDay(a) + ') to ' + fmtN(fb, 1) + '% (' + fmtDay(b) + '), ' + fmtS(fb - fa, 1) + ' pp; the same changes from ' + fmtN(R.f0, 1) + '% give the "like ' + q.label + '" line, ending at ' + endTxt(q) + '.';
+  return t + ' Actual past levels are in the Seasonal curve panel below (set it to Apr–Mar).';
+}
 
 /* ---------- winter so far ---------- */
 const WS = {from: lsGet('ws-from', 'nov'), sel: lsGet('ws-sel', []), auto: lsGet('ws-auto', true)};
@@ -1259,16 +1273,17 @@ function renderWinter() {
     const dates = Array.from({length: N}, (_, i) => addDays(R.d, i));
     const actual = dates.map(t => t <= r.d ? val(r.code, 'full', t) : null);
     const series = R.paths.filter(q => !topSet.has(q)).map(q => ({name: q.label, vals: q.p, color: 'var(--line-strong)', width: 1, noDot: true}));
-    for (const q of top) series.push({name: 'Like ' + q.label, vals: q.p, color: tc.get(q.y0), width: 2, endLabel: q.label + ' ' + endTxt(q)});
+    for (const q of top) series.push({name: 'Like ' + q.label, vals: q.p, color: tc.get(q.y0), width: 2, endLabel: 'like ' + q.label + ' ' + endTxt(q)});
     series.push({name: 'Median', vals: R.med, color: 'var(--ink-2)', width: 2, dash: '6 4', endLabel: 'median ' + fmtN(R.med[R.n], 0) + '%'});
     series.push({name: 'Actual', vals: actual, color: 'var(--ink)', width: 3});
     const refs = [], shades = [];
     for (const m of (Y === 2026 && RULES[r.code]) || []) { const i = dates.indexOf(m.date); if (i >= 0) refs.push({v: m.min, label: m.label + ' (1 Feb)'}); }
     $('#ws-c-sub').textContent = cname(r.code) + ' · outlook started ' + fmtDay(addDays(R.d, 1)) + ' from ' + fmtN(R.f0, 1) + '%, actual to ' + fmtDM(r.d);
+    $('#ws-note').innerHTML = whatIfNote(r.code, R, top[0] || r.close[0].q, true);
     $('#ws-key').innerHTML = '<span><i style="background:var(--ink);height:4px"></i>Actual</span><span><i class="dash"></i>Median of past winters</span><span><i class="box" style="background:var(--band)"></i>Range</span>' +
-      top.map(q => '<span><i style="background:' + tc.get(q.y0) + '"></i>' + 'Like ' + q.label + (gapOf.get(q.y0) && gapOf.get(q.y0).rank <= 3 ? ' (' + ord(gapOf.get(q.y0).rank) + ' closest)' : '') + '</span>').join('') + '<span><i style="background:var(--line-strong)"></i>Other past winters</span>' + (refs.length ? '<span><i class="tgt"></i>National rule</span>' : '');
+      top.map(q => '<span><i style="background:' + tc.get(q.y0) + '"></i>' + 'What-if like ' + q.label + (gapOf.get(q.y0) && gapOf.get(q.y0).rank <= 3 ? ' (' + ord(gapOf.get(q.y0).rank) + ' closest)' : '') + '</span>').join('') + '<span><i style="background:var(--line-strong)"></i>Other past winters (what-if)</span>' + (refs.length ? '<span><i class="tgt"></i>National rule</span>' : '');
     plot($('#ws-chart'), {
-      n: N, series, band: {lo: R.lo, hi: R.hi}, unit: '%', clamp: [0, 100], padR: R.paths.some(q => q.empty) ? 132 : 96, refs, shades,
+      n: N, series, band: {lo: R.lo, hi: R.hi}, unit: '%', clamp: [0, 100], padR: R.paths.some(q => q.empty) ? 160 : 126, refs, shades,
       vlines: [{i: today, label: 'today'}], H: ($('#ws-chart').clientWidth || 600) < 520 ? 250 : 320,
       xTicks: dates.map((t, i) => t.slice(8) === '01' ? [i, MON[+t.slice(5, 7) - 1]] : null).filter(Boolean),
       aria: 'Winter so far against past winters for ' + cname(r.code),
@@ -1280,7 +1295,7 @@ function renderWinter() {
         return h;
       },
     });
-  } else { $('#ws-chart').innerHTML = ''; $('#ws-key').innerHTML = ''; $('#ws-c-sub').textContent = ''; $('#ws-years').innerHTML = ''; }
+  } else { $('#ws-chart').innerHTML = ''; $('#ws-key').innerHTML = ''; $('#ws-c-sub').textContent = ''; $('#ws-years').innerHTML = ''; $('#ws-note').innerHTML = ''; }
   // milestones ahead, from the chosen day
   const Rn = r && outlook(r.code, r.d, OL.n);
   if (Rn && Rn.H.kind === 'winter') {
@@ -1308,7 +1323,7 @@ function renderWinter() {
 $('#ws-from').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; WS.from = b.dataset.v; lsSet('ws-from', WS.from); renderWinter(); });
 $('#png-ws').addEventListener('click', () => savePNG({
   name: 'winter-so-far-' + ST.code + '-' + ST.date, title: 'Winter so far · ' + cname(ST.code), sub: $('#ws-c-sub').textContent + '. ' + $('#ws-foot').textContent,
-  blocks: [{el: $('#ws-chart'), keyEl: $('#ws-key')}], foot: srcLine('. Past-winter paths are what-ifs, not forecasts'),
+  blocks: [{el: $('#ws-chart'), keyEl: $('#ws-key')}], foot: srcLine('. "Like 20xx/yy" lines are what-ifs: this winter\'s starting level with that past winter\'s day-by-day changes, not the levels it actually had, and not forecasts'),
 }));
 $('#dl-ws').addEventListener('click', () => {
   const rows = CO.map(c => wsRow(c.code, ST.date)).filter(Boolean);
@@ -1662,7 +1677,7 @@ $('#png-season').addEventListener('click', () => savePNG({
 }));
 $('#png-ol').addEventListener('click', () => savePNG({
   name: 'outlook-' + ST.code + '-' + ST.date, title: $('#ol-title').textContent + ' · ' + cname(ST.code), sub: $('#ol-sub').textContent + '. ' + $('#ol-foot').textContent,
-  blocks: [{el: $('#ol-chart'), keyEl: $('#ol-key')}], foot: srcLine('. What-if from past years\' storage changes, not a forecast'),
+  blocks: [{el: $('#ol-chart'), keyEl: $('#ol-key')}], foot: srcLine('. "Like 20xx/yy" lines are what-ifs: today\'s level with that past year\'s day-by-day changes, not the levels it actually had, and not forecasts'),
 }));
 $('#png-hist').addEventListener('click', () => savePNG({
   name: 'history-' + ST.code + '-' + ST.from + '-' + ST.to, title: 'History · ' + cname(ST.code), sub: fmtDay(ST.from) + ' to ' + fmtDay(ST.to),
