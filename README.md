@@ -10,7 +10,7 @@ Same look as Spotrank, but no game.
 - `site/` is the website (GitHub Pages). One file, `site/index.html`, no libraries.
 - `site/data/storage.json` holds the daily AGSI+ data, `site/data/lng.json` the ALSI LNG data by
   country and `site/data/lng_terminals.json` the ALSI data for each terminal (countries and start
-  year under `terminals` in `config.json`), all written by `scripts/fetch_gie.py` (one script, one API
+  year under `terminals` in `config.json`; `"EU"` there means every EU member state), all written by `scripts/fetch_gie.py` (one script, one API
   key for both platforms). Terminals come from ALSI's own listing (`about?show=listing`), so a new
   terminal appears without code changes.
 - `site/data/ttf.json` holds TTF, written by `scripts/fetch_ttf.py`.

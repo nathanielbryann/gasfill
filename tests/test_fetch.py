@@ -93,5 +93,14 @@ def test_listing():
     print("listing tests passed")
 
 
+def test_terminal_countries():
+    codes, scope = fg.terminal_countries({"countries": ["EU"]})
+    assert scope == "EU" and {"DE", "ES", "PL", "GR", "EL"} <= codes and "GB" not in codes and "NO" not in codes
+    codes, scope = fg.terminal_countries({"countries": ["de", "NL"]})
+    assert codes == {"DE", "NL"} and scope is None
+    print("terminal countries ok")
+
+
 if __name__ == "__main__":
     test_listing()
+    test_terminal_countries()

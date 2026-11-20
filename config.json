@@ -11,5 +11,5 @@
     {"code": "FR", "name": "France", "agsi": {"country": "FR"}, "alsi": {"country": "FR"}, "eu_target": true},
     {"code": "GB", "name": "United Kingdom", "agsi": {"country": "GB"}, "alsi": {"country": "GB"}, "eu_target": false}
   ],
-  "terminals": {"countries": ["DE", "NL", "FR", "IT"], "from": "2021-01-01"}
+  "terminals": {"countries": ["EU"], "from": "2021-01-01"}
 }

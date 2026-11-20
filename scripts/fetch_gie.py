@@ -283,6 +283,17 @@ def run(name, cfg, key, full, only):
 # ---------- terminal by terminal (ALSI) ----------
 TERMINALS_OUT = os.path.join(ROOT, "site", "data", "lng_terminals.json")
 LISTING_URL = "https://alsi.gie.eu/api/about"
+# "EU" in config terminals.countries means every EU member state (Greece appears as GR or EL)
+EU27 = {"AT", "BE", "BG", "HR", "CY", "CZ", "DK", "EE", "FI", "FR", "DE", "GR", "EL", "HU", "IE", "IT", "LV", "LT",
+        "LU", "MT", "NL", "PL", "PT", "RO", "SK", "SI", "ES", "SE"}
+TERMINAL_FIELDS = ("inv", "sendOut", "dtmi", "dtrs")   # the page does not use invLng, so the file leaves it out
+
+
+def terminal_countries(tc):
+    """config terminals.countries -> (set of country codes, scope). 'EU' expands to all EU member states."""
+    raw = [str(c).upper() for c in (tc.get("countries") or [])]
+    codes = {c for c in raw if c != "EU"} | (EU27 if "EU" in raw else set())
+    return codes, ("EU" if "EU" in raw else None)
 
 
 def walk_listing(js):
@@ -328,7 +339,7 @@ def walk_listing(js):
 
 def run_terminals(cfg, key, full):
     tc = cfg.get("terminals") or {}
-    countries, start0 = set(tc.get("countries") or []), tc.get("from", cfg["fetch_from"])
+    (countries, scope), start0 = terminal_countries(tc), tc.get("from", cfg["fetch_from"])
     ds = DATASETS["alsi"]
     print("--- ALSI TERMINALS ---", flush=True)
     try:
@@ -386,13 +397,13 @@ def run_terminals(cfg, key, full):
         rep_days = [d for d, r in recs.items() if r.get("sendOut") is not None or r.get("inv") is not None]
         if not rep_days:
             continue
-        s = {k: [recs.get(d, {}).get(k) for d in days] for k in ds["fields"]}
+        s = {k: [recs.get(d, {}).get(k) for d in days] for k in TERMINAL_FIELDS}
         s["status"] = "".join(recs.get(d, {}).get("status", "-") for d in days)
         s["first"], s["last"] = min(rep_days), max(rep_days)
         series[t["id"]] = s
         meta.append({k: t[k] for k in ("id", "name", "company_name", "country")})
     js = {"meta": {"dataset": "alsi-terminals", "source": ds["source"], "generated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                   "units": {k: u for k, (_, _, _, u) in ds["fields"].items()}, "terminals": meta},
+                   "units": {k: u for k, (_, _, _, u) in ds["fields"].items() if k in TERMINAL_FIELDS}, "scope": scope, "terminals": meta},
           "start": start0, "end": end, "series": series}
     tmp = TERMINALS_OUT + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
