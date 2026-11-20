@@ -297,6 +297,25 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
     <p class="map-note" style="margin:6px 0 0;max-width:none">Click a winter in the chips or in the table to draw it on the chart; clicking again removes it. Your picks are remembered.</p>
   </section>
 
+  <section class="panel" id="dem" hidden>
+    <div class="chart-head"><h2>Storage vs demand <span class="sub" id="dm-sub"></span></h2></div>
+    <div class="ctrl"><span class="lbl">Country</span><div class="chips" id="dm-chips"></div></div>
+    <p class="map-msg" id="dm-msg" hidden></p>
+    <div id="dm-body">
+      <div class="kpis" id="dm-kpis"></div>
+      <h3 class="ph-h3">Same day each year <span id="dm-t-sub"></span></h3>
+      <div class="tbl-scroll"><table id="dm-table"><thead></thead><tbody></tbody></table></div>
+      <h3 class="ph-h3">Monthly demand <span id="dm-c-sub"></span></h3>
+      <div class="ctrl"><span class="lbl">Years</span><div class="chips" id="dm-ychips"></div></div>
+      <div class="key" id="dm-key"></div>
+      <div class="chart-wrap" id="dm-chart"></div>
+      <div class="foot"><button class="btn sm" type="button" id="png-dm">Save PNG</button><button class="btn sm" type="button" id="dl-dm">Download CSV</button><span id="dm-foot"></span></div>
+      <h3 class="ph-h3">Storage's share of winter demand <span id="dm-s-sub"></span></h3>
+      <div class="tbl-scroll"><table id="dm-share"><thead></thead><tbody></tbody></table></div>
+      <p class="map-note" style="margin:8px 0 0;max-width:none">Demand is Eurostat's monthly inland consumption, published about two to three months late, so the latest months are blank here. "Weeks of winter demand" is not how long storage would last: production, pipeline imports and LNG keep flowing alongside it. The share of winter demand is how much of each month's demand was covered by taking gas out of storage.</p>
+    </div>
+  </section>
+
   <section class="panel" id="season" hidden>
     <div class="chart-head"><h2>Seasonal curve <span class="sub" id="season-sub"></span></h2></div>
     <div class="ctrl">
@@ -306,7 +325,7 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
       <span class="lbl">Years</span><div class="chips" id="y-chips"></div>
     </div>
     <div class="ctrl">
-      <div class="seg seg-sm" id="s-metric" role="group" aria-label="Measure"><button type="button" data-v="full">Fill %</button><button type="button" data-v="gas">TWh</button></div>
+      <div class="seg seg-sm" id="s-metric" role="group" aria-label="Measure"><button type="button" data-v="full">Fill %</button><button type="button" data-v="gas">TWh</button><button type="button" data-v="consFull">% of demand · AGSI</button><button type="button" data-v="demE">% of demand · Eurostat</button></div>
       <div class="seg seg-sm" id="s-axis" role="group" aria-label="Year runs"><button type="button" data-v="cal">Jan–Dec</button><button type="button" data-v="gy">Apr–Mar</button></div>
     </div>
     <div class="key" id="s-key"></div>
@@ -355,6 +374,7 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
       <div class="dates"><input type="date" id="h-from" aria-label="From"> to <input type="date" id="h-to" aria-label="To"></div>
     </div>
     <h3 class="ph-h3">Fill level <span id="h-fill-sub"></span></h3>
+    <div class="ctrl"><div class="seg seg-sm" id="h-metric" role="group" aria-label="Measure"><button type="button" data-v="full">Fill %</button><button type="button" data-v="consFull">% of demand · AGSI</button><button type="button" data-v="demE">% of demand · Eurostat</button></div></div>
     <div class="key" id="h-fill-key"></div>
     <div class="chart-wrap" id="h-fill"></div>
     <h3 class="ph-h3">Net injection / withdrawal <span id="h-flow-sub"></span></h3>
@@ -381,6 +401,7 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
       <li><b>Winter outlook:</b> starts from the chosen day's fill level and adds, day by day, the change in storage of the same calendar days in each past year (gas in storage change divided by that year's working gas volume, so capacity changes don't distort it), kept between 0% and 100%. Each past year gives one path; the chart shows them all, their median and range. From April to September it becomes a refill outlook to 1 December. It is a what-if on past patterns, not a forecast: it doesn't know this winter's weather, prices or LNG supply, and a nearly empty store can't withdraw as fast as a full one.</li>
       <li><b>Injection &amp; withdrawal:</b> injection and withdrawal are AGSI+ daily flows (GWh/d); net flow is injection minus withdrawal. <i>Days left at this pace</i> divides gas in storage (or the gap to 30% or 90%) by the last 7 days' average net flow, so it assumes that pace holds. <i>Cumulative since the season started</i> is the change in gas in storage since the end of 30 September (withdrawal season) or 31 March (injection season), in TWh. A season starts on the first day of a 14-day run in which the centred 7-day average net flow keeps the same sign, searched from the winter low (injection) or the autumn peak (withdrawal), so a short mild spell mid-winter doesn't count. Season totals add up daily injection (April–September) or withdrawal (October–March), so they are gross flows.</li>
       <li><b>Winter so far:</b> compares the change in gas in storage since the chosen start (end of 30 September, end of 31 October, or the day before the country's withdrawal season began) with the same calendar days in each past winter since 2016, as a share of each year's capacity; rank 1 is the biggest drop. <i>Pace vs normal</i> compares the average net flow over those days with the five previous winters. <i>Tracking like</i> starts the winter outlook from the chosen start and names the past winters whose paths stayed closest to what actually happened (smallest average gap). <i>Milestones</i> come from the outlook run from the chosen day, plus a straight-line projection at the last 7 days' pace. Germany's 30% on 1 February is the national rule for winter 2026/27 (Gasspeicherfüllstandsverordnung, in force until 31 March 2027).</li>
+      <li><b>Demand:</b> <a href="https://ec.europa.eu/eurostat/databrowser/view/nrg_cb_gasm/default/table" target="_blank" rel="noopener">Eurostat nrg_cb_gasm</a>, monthly inland consumption of natural gas (code IC_CAL_MG, TJ on a gross calorific value basis, shown in TWh), published about two to three months late; recent months are often provisional. <i>Share of a year's demand</i> is gas in storage divided by demand in the 12 complete months before that day (or the latest 12 Eurostat has). The <i>AGSI reference</i> version uses the yearly consumption figure that AGSI+ itself publishes for each country (the basis of the EU rule's alternative target of 35% of annual consumption); it is a reported reference, not measured demand. <i>Weeks of winter demand</i> divides gas in storage by the average daily demand of the latest Dec–Feb before that day; it is not how long storage lasts, because production, pipeline imports and LNG keep flowing. <i>Storage's share of winter demand</i> is a month's net withdrawal (AGSI+) divided by that month's demand.</li>
       <li><b>LNG terminals:</b> <a href="https://alsi.gie.eu" target="_blank" rel="noopener">GIE ALSI</a> data for every LNG terminal in the EU since 2021, as ALSI lists them. The EU view adds them up by country (the seven largest by capacity, the rest as "Other"); its total can differ slightly from ALSI's own EU figure when an operator reports late. When a terminal changes operator, ALSI lists it twice; the charts join the two into one terminal. <i>Use of capacity</i> is the 7-day average send-out divided by the terminal's declared total reference send-out (DTRS), the capacity the operator declares. <i>Spare</i> is capacity minus send-out: how much more a country could regasify if cargoes arrived; it says nothing about whether cargoes are available. <i>Tank level</i> is LNG in tanks against the declared maximum inventory (DTMI). A terminal counts as idle when its 7-day send-out is below 5% of capacity. Terminals with no data in the last 30 days are left out.</li>
       <li><b>What stands out:</b> automatic notes for the chosen day: records for the calendar day across all years in the data, streaks outside the 5-year range, the fastest 7-day changes for that week of the year, the filling target, the season's peak, TTF and LNG send-out.</li>
       <li><b>TTF:</b> <span id="ttf-src">TTF spot, EUR/MWh</span>.</li>
@@ -442,6 +463,8 @@ function lngBase(code, d) {   // the same 7-day window in the five previous year
   return xs.length >= 3 ? {avg: xs.reduce((a, b) => a + b, 0) / xs.length, min: Math.min(...xs), max: Math.max(...xs)} : null;
 }
 function val(code, key, d) {
+  if (key === 'demE') { const g = val(code, 'gas', d), r = ok(g) ? dm12(code, d) : null; return r ? g / r.sum * 100 : null; }      // % of the last 12 months' demand (Eurostat)
+  if (key === 'wks') { const g = val(code, 'gas', d), w = ok(g) ? winterDemand(code, d) : null; return w ? g / (w.daily * 7) : null; }   // weeks of average Dec–Feb demand
   const s = S.series[code]; if (!s || !s[key]) return null;
   const i = daysBetween(S.start, d);
   return i >= 0 && i < s[key].length ? s[key][i] : null;
@@ -456,6 +479,33 @@ function base5(code, key, d) {
   for (let k = 1; k <= 5; k++) { const v = val(code, key, yearsAgo(d, k)); if (ok(v)) xs.push(v); }
   if (xs.length < 3) return null;
   return {avg: xs.reduce((a, b) => a + b, 0) / xs.length, min: Math.min(...xs), max: Math.max(...xs), n: xs.length};
+}
+/* ---------- demand (Eurostat monthly, demand.json) ---------- */
+let DM = null;   // {months, series: {code: [TWh per month]}, flags, meta}
+const addMonths = (m, n) => { const t = +m.slice(0, 4) * 12 + (+m.slice(5, 7) - 1) + n; return Math.floor(t / 12) + '-' + String(t % 12 + 1).padStart(2, '0'); };
+const monthDays = m => new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)).getUTCDate();
+const hasDM = code => !!(DM && DM.series[code]);
+function dmon(code, m) { if (!hasDM(code)) return null; const i = DM.idx[m]; return i === undefined ? null : DM.series[code][i]; }
+const dmLast = code => (DM.meta.last && DM.meta.last[code]) || DM.months[DM.months.length - 1];
+const fmtMon = m => MON[+m.slice(5, 7) - 1] + ' ' + m.slice(0, 4);
+const DMC = new Map();
+function dmEnd(code, d) { let e = addMonths(d.slice(0, 7), -1); const la = dmLast(code); return e > la ? la : e; }
+function dm12(code, d) {   // demand in the 12 complete months before d's month, or the latest 12 Eurostat has
+  if (!hasDM(code)) return null;
+  const e = dmEnd(code, d), k = code + ':' + e; if (DMC.has(k)) return DMC.get(k);
+  let s = 0, r = null;
+  for (let j = 0; j < 12; j++) { const v = dmon(code, addMonths(e, -j)); if (!ok(v)) { s = null; break; } s += v; }
+  if (s !== null) r = {sum: s, start: addMonths(e, -11), end: e};
+  DMC.set(k, r); return r;
+}
+function winterDemand(code, d) {   // average daily demand, Dec–Feb, of the latest winter Eurostat has before d
+  if (!hasDM(code)) return null;
+  const e = dmEnd(code, d); const y = e.slice(5) < '02' ? +e.slice(0, 4) - 1 : +e.slice(0, 4);
+  const k = 'w' + code + ':' + y; if (DMC.has(k)) return DMC.get(k);
+  let s = 0, n = 0, r = null;
+  for (const m of [(y - 1) + '-12', y + '-01', y + '-02']) { const v = dmon(code, m); if (!ok(v)) { s = null; break; } s += v; n += monthDays(m); }
+  if (s !== null) r = {daily: s / n, y, label: 'Dec ' + String(y - 1).slice(2) + '–Feb ' + String(y).slice(2)};
+  DMC.set(k, r); return r;
 }
 const isTarget = code => !!(CM[code] && CM[code].eu_target);
 const cname = code => CM[code] ? (CM[code].aggregate ? 'EU total' : CM[code].name) : code;
@@ -602,6 +652,7 @@ const ST = {
   axis: lsGet('s-axis', 'cal'),
   years: lsGet('s-years', null),
   preset: lsGet('h-preset', '1y'),
+  hKey: lsGet('h-key', 'full'),
   from: null, to: null,
 };
 let FIRST = null, LAST = null;
@@ -625,7 +676,7 @@ function renderKpis() {
   const est = stat(code, d) === 'E';
   const tiles = [
     [cname(code) + ' storage', fmtN(f, 1) + '<small>%</small>', (est ? 'of capacity · estimated' : 'of working gas volume') + (d !== ST.date ? ' · as of ' + fmtDM(d) : '')],
-    ['Gas in storage', fmtN(g, 0) + '<small>TWh</small>', 'of ' + fmtN(w, 0) + ' TWh capacity'],
+    ['Gas in storage', fmtN(g, 0) + '<small>TWh</small>', 'of ' + fmtN(w, 0) + ' TWh capacity' + (ok(val(code, 'consFull', d)) ? ' · ' + fmtN(val(code, 'consFull', d), 1) + "% of a year's demand" : '')],
     ['vs 5-year average', (b && ok(f) ? fmtS(f - b.avg, 1) : '–') + '<small>pp</small>', b ? 'average ' + fmtN(b.avg, 1) + '% on this day (range ' + fmtN(b.min, 0) + '–' + fmtN(b.max, 0) + ')' : 'not enough history'],
     ['Net flow, 7 days', fmtS(nf, 0) + '<small>GWh/d</small>', ok(nf) ? (nf >= 0 ? 'net injection' : 'net withdrawal') + ' · daily average' : ''],
     ['Change, 7 days', (ok(f) && ok(f7) ? fmtS(f - f7, 1) : '–') + '<small>pp</small>', ok(f7) ? 'from ' + fmtN(f7, 1) + '% on ' + fmtDM(addDays(d, -7)) : ''],
@@ -647,14 +698,14 @@ function setDate(d, opts = {}) {
   $('#d-slider').value = daysBetween(FIRST, d);
   $('#snap-title').textContent = fmtDay(d);
   renderKpis(); renderSnapView(); renderTable();
-  if (!opts.light) { renderInsights(); renderWinter(); renderOutlook(); renderSeason(); renderFlows(); renderTerms(); }
+  if (!opts.light) { renderInsights(); renderWinter(); renderOutlook(); renderSeason(); renderDemand(); renderFlows(); renderTerms(); }
 }
 function initDate() {
   const sl = $('#d-slider'), inp = $('#d-input');
   sl.max = daysBetween(FIRST, LAST); inp.min = FIRST; inp.max = LAST;
   let raf = 0;
   sl.addEventListener('input', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => setDate(addDays(FIRST, +sl.value), {light: true})); });
-  sl.addEventListener('change', () => { renderInsights(); renderWinter(); renderOutlook(); renderSeason(); renderFlows(); renderTerms(); });
+  sl.addEventListener('change', () => { renderInsights(); renderWinter(); renderOutlook(); renderSeason(); renderDemand(); renderFlows(); renderTerms(); });
   inp.addEventListener('change', () => { if (inp.value) setDate(inp.value); });
   $('#d-prev').addEventListener('click', () => setDate(addDays(ST.date, -1)));
   $('#d-next').addEventListener('click', () => setDate(addDays(ST.date, 1)));
@@ -672,7 +723,7 @@ function initDate() {
   }
   $('#d-ticks').innerHTML = ticks.join('');
 }
-function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; } $('#d-play').textContent = '▶ Play'; renderInsights(); renderWinter(); renderOutlook(); renderSeason(); renderFlows(); renderTerms(); }
+function stopPlay() { if (playTimer) { clearInterval(playTimer); playTimer = null; } $('#d-play').textContent = '▶ Play'; renderInsights(); renderWinter(); renderOutlook(); renderSeason(); renderDemand(); renderFlows(); renderTerms(); }
 
 /* ---------- map and ranking ---------- */
 const FULL_BREAKS = [10, 20, 30, 40, 50, 60, 70, 80, 90];
@@ -864,6 +915,8 @@ function renderYearChips() {
     lsSet('s-years', ST.years); renderSeason();
   }));
 }
+const KEYTXT = {full: 'fill level, % of working gas volume', gas: 'gas in storage, TWh', consFull: "gas in storage as % of a year's demand (AGSI reference consumption)", demE: "gas in storage as % of demand in the last 12 months (Eurostat)"};
+const KEYNOTE = {consFull: "AGSI's reference is a yearly consumption figure reported by each country, not measured demand.", demE: 'Each day is divided by demand in the 12 months before it; Eurostat is 2–3 months behind, so recent days use the latest 12 months available.'};
 function seasonData() {
   const code = ST.code, key = ST.sKey, mode = ST.axis, ys = seasonYears(), F = ys[ys.length - 1];
   const lines = ys.map(Y => ({Y, vals: seasonDates(Y, mode).map(d => d > LAST ? null : val(code, key, d))}));
@@ -879,8 +932,8 @@ function renderSeason() {
   if (!S) return;
   renderYearChips();
   const D = seasonData(), {code, key, mode, F} = D, dates = seasonDates(F, mode);
-  const unit = key === 'full' ? '%' : 'TWh', dec = key === 'full' ? 1 : 1;
-  $('#season-sub').textContent = cname(code) + ' · ' + (key === 'full' ? 'fill level, % of working gas volume' : 'gas in storage, TWh') + ' · range = ' + seasonLabel(F - 5, mode) + ' to ' + seasonLabel(F - 1, mode);
+  const unit = key === 'gas' ? 'TWh' : '%', dec = 1;
+  $('#season-sub').textContent = cname(code) + ' · ' + KEYTXT[key] + ' · range = ' + seasonLabel(F - 5, mode) + ' to ' + seasonLabel(F - 1, mode);
   const shown = D.lines.filter(l => l.Y === F || ST.years.includes(l.Y)).sort((a, b) => a.Y - b.Y);
   const series = [{name: '5-yr avg', vals: D.av, color: 'var(--ink-2)', width: 1.5, dash: '5 4', noDot: true}];
   for (const l of shown) if (l.Y !== F) series.push({name: seasonLabel(l.Y, mode), vals: l.vals, color: yearColour(l.Y), width: 1.75, endLabel: seasonLabel(l.Y, mode)});
@@ -892,11 +945,11 @@ function renderSeason() {
     const a = dates.findIndex(d => d.slice(5) === '10-01'), b = dates.findIndex(d => d.slice(5) === '12-01');
     if (a >= 0 && b >= 0) shades.push([a, b, '1 Oct–1 Dec']);
     if (key === 'full') refs.push({v: 90, label: '90% target'});
-    else { const w = val(code, 'wgv', lastWith(code, 'wgv', LAST) || LAST); if (ok(w)) refs.push({v: 0.9 * w, label: '90% of capacity'}); }
+    else if (key === 'gas') { const w = val(code, 'wgv', lastWith(code, 'wgv', LAST) || LAST); if (ok(w)) refs.push({v: 0.9 * w, label: '90% of capacity'}); }
   }
   const ticks = dates.map((d, i) => d.slice(8) === '01' ? [i, MON[+d.slice(5, 7) - 1]] : null).filter(Boolean);
   $('#s-key').innerHTML = '<span><i style="background:var(--ink);height:4px"></i>' + seasonLabel(F, mode) + '</span><span><i class="box" style="background:var(--band)"></i>5-year range</span><span><i class="dash"></i>5-year average</span>' +
-    (tgt ? '<span><i class="tgt"></i>90% target</span><span><i class="box" style="background:var(--window);border:1px solid var(--line)"></i>1 Oct–1 Dec window</span>' : '');
+    (tgt ? (key === 'full' || key === 'gas' ? '<span><i class="tgt"></i>90% target</span>' : '') + '<span><i class="box" style="background:var(--window);border:1px solid var(--line)"></i>1 Oct–1 Dec window</span>' : '');
   plot($('#s-chart'), {
     n: 365, series, band: {lo: D.lo, hi: D.hi}, refs, shades, xTicks: ticks, unit, padR: 52, clamp: key === 'full' ? [0, 100] : null,
     H: ($('#s-chart').clientWidth || 600) < 520 ? 240 : 320, zero: key !== 'full' ? false : false,
@@ -910,13 +963,119 @@ function renderSeason() {
     },
   });
   const lastV = cur.vals.reduce((a, v, i) => ok(v) ? i : a, -1);
-  $('#s-foot').textContent = lastV >= 0 && ok(D.av[lastV]) ? 'Latest ' + fmtDM(dates[lastV]) + ': ' + fmtN(cur.vals[lastV], 1) + (key === 'full' ? '%' : ' TWh') + ', ' + fmtS(cur.vals[lastV] - D.av[lastV], 1) + (key === 'full' ? ' pp' : ' TWh') + ' against the 5-year average.' : '';
+  $('#s-foot').textContent = (lastV >= 0 && ok(D.av[lastV]) ? 'Latest ' + fmtDM(dates[lastV]) + ': ' + fmtN(cur.vals[lastV], 1) + (key === 'gas' ? ' TWh' : '%') + ', ' + fmtS(cur.vals[lastV] - D.av[lastV], 1) + (key === 'gas' ? ' TWh' : ' pp') + ' against the 5-year average.' : '') + (KEYNOTE[key] ? ' ' + KEYNOTE[key] : '');
 }
 $('#dl-season').addEventListener('click', () => {
   const D = seasonData(), dates = seasonDates(D.F, D.mode);
   const head = ['day_of_year', 'day'].concat(D.ys.map(Y => seasonLabel(Y, D.mode)), ['avg_5y', 'min_5y', 'max_5y']);
   const rows = dates.map((d, i) => [i + 1, d.slice(5)].concat(D.lines.map(l => l.vals[i]), [D.av[i], D.lo[i], D.hi[i]]));
   saveCSV('seasonal-' + D.code + '-' + D.key + '-' + D.mode + '.csv', [head].concat(rows));
+});
+
+/* ---------- storage vs demand ---------- */
+const DMS = {years: lsGet('dm-years', null)};
+const ordinal = n => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+function sameDayRows(code, d) {   // the same calendar day in every year with storage data, newest first, with ranks (1 = lowest)
+  const rows = [];
+  for (let k = 0; k <= 30; k++) {
+    const a = yearsAgo(d, k); if (a < S.start) break;
+    const dd = reportedDay(code, a) || a;
+    const r = {Y: +a.slice(0, 4), d: dd, gas: val(code, 'gas', dd), full: val(code, 'full', dd), cf: val(code, 'consFull', dd), de: val(code, 'demE', dd), wk: val(code, 'wks', dd), r12: dm12(code, dd), w: winterDemand(code, dd)};
+    if (ok(r.full)) rows.push(r);
+  }
+  for (const key of ['gas', 'full', 'cf', 'de', 'wk']) {
+    const xs = rows.filter(r => ok(r[key])).sort((p, q) => p[key] - q[key]);
+    xs.forEach((r, i) => { r['rk_' + key] = i + 1; }); rows.forEach(r => { r['n_' + key] = xs.length; });
+  }
+  return rows;
+}
+function monthNet(code, m) {   // net withdrawal in a month, TWh (negative = net injection); null if more than 3 days are missing
+  let s = 0, miss = 0; const n = monthDays(m);
+  for (let i = 1; i <= n; i++) { const v = net(code, m + '-' + String(i).padStart(2, '0')); if (ok(v)) s -= v; else miss++; }
+  return miss > 3 ? null : s / 1000;
+}
+function demandYears(code) { const ys = []; if (!hasDM(code)) return ys; for (const m of DM.months) { const y = +m.slice(0, 4); if (ok(dmon(code, m)) && !ys.includes(y)) ys.push(y); } return ys; }
+function renderDemand() {
+  if (!S || !DM) return;
+  const code = ST.code, d = ST.date;
+  $('#dm-chips').innerHTML = CO.filter(c => hasDM(c.code)).map(c => '<button type="button" class="zp" data-c="' + c.code + '" aria-pressed="' + (c.code === code) + '"><i style="background:var(--ink)"></i>' + esc(c.code) + '</button>').join('');
+  $('#dm-chips').querySelectorAll('.zp').forEach(b => b.addEventListener('click', () => selectCountry(b.dataset.c, false)));
+  if (!hasDM(code)) {
+    $('#dm-body').hidden = true; $('#dm-msg').hidden = false;
+    $('#dm-msg').textContent = 'Eurostat has no monthly gas demand for ' + cname(code) + '. Pick another country.';
+    $('#dm-sub').textContent = ''; return;
+  }
+  $('#dm-body').hidden = false; $('#dm-msg').hidden = true;
+  const rows = sameDayRows(code, d), cur = rows[0];
+  $('#dm-sub').textContent = cname(code) + ' · ' + fmtDay(cur.d) + ' · Eurostat demand to ' + fmtMon(dmLast(code));
+  // tiles
+  const avgYr = (() => { const xs = []; for (let y = 2017; y <= 2021; y++) { let s = 0, ok12 = true; for (let k = 1; k <= 12; k++) { const v = dmon(code, y + '-' + String(k).padStart(2, '0')); if (!ok(v)) { ok12 = false; break; } s += v; } if (ok12) xs.push(s); } return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null; })();
+  const r12 = cur.r12, prev12 = r12 ? dm12(code, addMonths(r12.end, -11) + '-15') : null;
+  const tiles = [
+    ["Share of a year's demand", fmtN(ok(cur.de) ? cur.de : cur.cf, 1) + '<small>%</small>', ok(cur.de) ? 'gas in storage ÷ demand in the 12 months to ' + fmtMon(r12.end) + ' (' + fmtN(r12.sum, 0) + ' TWh, Eurostat) · AGSI reference: ' + fmtN(cur.cf, 1) + '%' : 'AGSI reference consumption'],
+    ['Weeks of winter demand', fmtN(cur.wk, 1) + '<small>weeks</small>', cur.w ? 'gas in storage ÷ average daily demand ' + cur.w.label + ' (' + fmtN(cur.w.daily, 2) + ' TWh/d)' : ''],
+    ['Same day since ' + rows[rows.length - 1].Y, ok(cur.rk_de) ? ordinal(cur.rk_de) + '<small>lowest of ' + cur.n_de + '</small>' : '–', 'in demand terms (Eurostat) · by fill %: ' + (cur.rk_full === 1 ? 'the lowest' : ordinal(cur.rk_full) + ' lowest') + ' of ' + cur.n_full],
+    ['Demand, last 12 months', r12 && ok(avgYr) ? fmtS((r12.sum / avgYr - 1) * 100, 0) + '<small>% vs 2017–21</small>' : '–', r12 ? fmtN(r12.sum, 0) + ' TWh to ' + fmtMon(r12.end) + (prev12 && ok(prev12.sum) ? ' · ' + fmtS((r12.sum / prev12.sum - 1) * 100, 1) + '% on the 12 months before' : '') + (ok(avgYr) ? ' · 2017–21 average ' + fmtN(avgYr, 0) + ' TWh' : '') : ''],
+  ];
+  $('#dm-kpis').innerHTML = tiles.map(([l, v, s]) => '<div class="kpi"><span class="l">' + esc(l) + '</span><span class="v">' + v + '</span><span class="s">' + esc(s) + '</span></div>').join('');
+  // same day each year
+  $('#dm-t-sub').textContent = fmtDM(d) + ' each year · (rank: 1 = lowest)';
+  const rk = (r, k) => ok(r['rk_' + k]) ? ' <span class="mut" style="font-size:11.5px">(' + r['rk_' + k] + ')</span>' : '';
+  $('#dm-table thead').innerHTML = '<tr><th>Year</th><th class="num">In storage<small>TWh</small></th><th class="num">Fill<small>% of capacity</small></th><th class="num">Share of a year\'s demand<small>%, AGSI reference</small></th><th class="num">Share of a year\'s demand<small>%, Eurostat, last 12 months</small></th><th class="num">Weeks of winter demand<small>Eurostat, previous Dec–Feb</small></th></tr>';
+  $('#dm-table tbody').innerHTML = rows.map(r => '<tr class="' + (r === cur ? 'sel' : '') + '"><td>' + r.Y + (r.d.slice(5) !== d.slice(5) && r === cur ? ' <span class="est">as of ' + fmtDM(r.d) + '</span>' : '') + '</td>' +
+    '<td class="num">' + fmtN(r.gas, 0) + rk(r, 'gas') + '</td><td class="num">' + fmtN(r.full, 1) + rk(r, 'full') + '</td><td class="num">' + fmtN(r.cf, 1) + rk(r, 'cf') + '</td><td class="num">' + fmtN(r.de, 1) + rk(r, 'de') + '</td><td class="num">' + fmtN(r.wk, 1) + rk(r, 'wk') + '</td></tr>').join('');
+  // monthly demand against 2017–2021
+  const ys = demandYears(code), lastY = ys[ys.length - 1];
+  if (!DMS.years) DMS.years = ys.filter(y => y >= lastY - 3 && y < lastY);
+  $('#dm-ychips').innerHTML = ys.filter(y => y >= 2015).map(Y => '<button type="button" class="zp' + (Y === lastY ? ' cur' : '') + '" data-y="' + Y + '" aria-pressed="' + (Y === lastY || DMS.years.includes(Y)) + '"><i style="background:' + (Y === lastY ? 'var(--ink)' : 'var(--line-strong)') + '"></i>' + Y + '</button>').join('');
+  $('#dm-ychips').querySelectorAll('.zp').forEach(b => b.addEventListener('click', () => { const Y = +b.dataset.y; if (Y === lastY) return; DMS.years = DMS.years.includes(Y) ? DMS.years.filter(y => y !== Y) : DMS.years.concat(Y); lsSet('dm-years', DMS.years); renderDemand(); }));
+  const perDay = (Y, k) => { const m = Y + '-' + String(k + 1).padStart(2, '0'), v = dmon(code, m); return ok(v) ? v / monthDays(m) : null; };
+  const lo = [], hi = [], av = [];
+  for (let k = 0; k < 12; k++) { const xs = []; for (let y = 2017; y <= 2021; y++) { const v = perDay(y, k); if (ok(v)) xs.push(v); } lo.push(xs.length ? Math.min(...xs) : null); hi.push(xs.length ? Math.max(...xs) : null); av.push(xs.length >= 3 ? xs.reduce((a, b) => a + b, 0) / xs.length : null); }
+  const shownY = DMS.years.filter(y => ys.includes(y) && y !== lastY).sort((a, b) => a - b), col = pickColours(shownY);
+  const pad = a => [null].concat(a, [null]);   // an empty slot each side, so Jan and Dec get their labels
+  const series = [{name: '2017–21 avg', vals: pad(av), color: 'var(--ink-2)', width: 1.5, dash: '5 4', noDot: true}];
+  for (const Y of shownY) series.push({name: String(Y), vals: pad(Array.from({length: 12}, (_, k) => perDay(Y, k))), color: col.get(Y), width: 1.75, endLabel: String(Y)});
+  series.push({name: String(lastY), vals: pad(Array.from({length: 12}, (_, k) => perDay(lastY, k))), color: 'var(--ink)', width: 3, endLabel: String(lastY)});
+  $('#dm-c-sub').textContent = cname(code) + ' · TWh per day, monthly average · Eurostat inland consumption';
+  $('#dm-key').innerHTML = '<span><i style="background:var(--ink);height:4px"></i>' + lastY + '</span>' + shownY.map(Y => '<span><i style="background:' + col.get(Y) + '"></i>' + Y + '</span>').join('') + '<span><i class="box" style="background:var(--band)"></i>2017–2021 range</span><span><i class="dash"></i>2017–2021 average</span>';
+  plot($('#dm-chart'), {
+    n: 14, series, band: {lo: pad(lo), hi: pad(hi)}, xTicks: MON.map((m, k) => [k + 1, m]), unit: 'TWh/d', padR: 44, zero: true,
+    H: ($('#dm-chart').clientWidth || 600) < 520 ? 230 : 290, aria: 'Monthly gas demand, ' + cname(code),
+    tip: j => { const i = Math.max(0, Math.min(11, j - 1)); let h = '<b>' + MON[i] + '</b>';
+      for (const s of series.slice(1).reverse()) if (ok(s.vals[i + 1])) { const m = s.name + '-' + String(i + 1).padStart(2, '0'), f = DM.flags[code] && DM.flags[code][m];
+        h += '<br>' + swatch(s.color) + s.name + ' <b>' + fmtN(s.vals[i + 1], 2) + '</b>' + (ok(av[i]) ? ' <span class="mut">' + fmtS((s.vals[i + 1] / av[i] - 1) * 100, 0) + '%</span>' : '') + (f ? ' <span class="mut">' + esc(f) + '</span>' : ''); }
+      if (ok(av[i])) h += '<br><span class="mut">2017–21 avg ' + fmtN(av[i], 2) + ' · range ' + fmtN(lo[i], 2) + '–' + fmtN(hi[i], 2) + '</span>';
+      return h; },
+  });
+  const fl = DM.flags[code] || {}, pm = Object.keys(fl).filter(m => fl[m].includes('p') && m >= addMonths(dmLast(code), -23)).sort();   // recent provisional months only
+  $('#dm-foot').textContent = '% in the tooltip: against the 2017–2021 average for that month.' + (pm.length ? ' Provisional (p): ' + fmtMon(pm[0]) + (pm.length > 1 ? ' to ' + fmtMon(pm[pm.length - 1]) : '') + '.' : '');
+  // storage's share of winter demand
+  const wins = []; for (let y = +S.start.slice(0, 4); y <= +d.slice(0, 4); y++) if (y + '-11-01' <= d) wins.push(y);
+  const MS = ['11', '12', '01', '02', '03'];
+  const cell = (y, mm) => { const m = (mm >= '11' ? y : y + 1) + '-' + mm; if (m + '-01' > LAST) return null; const nw = monthNet(code, m), dv = dmon(code, m); return {m, nw, dv, sh: ok(nw) && ok(dv) && dv > 0 ? nw / dv * 100 : null}; };
+  $('#dm-s-sub').textContent = 'net withdrawal ÷ demand in each month';
+  $('#dm-share thead').innerHTML = '<tr><th>Winter</th>' + MS.map(mm => '<th class="num">' + MON[+mm - 1] + '<small>%</small></th>').join('') + '<th class="num">Nov–Mar<small>%</small></th><th class="num">Net withdrawal<small>Nov–Mar, TWh</small></th><th class="num">Demand<small>Nov–Mar, TWh</small></th></tr>';
+  const bar = sh => ok(sh) ? ' style="background:linear-gradient(90deg, var(--q2) ' + Math.max(0, Math.min(100, sh / 60 * 100)).toFixed(0) + '%, transparent 0)"' : '';
+  $('#dm-share tbody').innerHTML = wins.slice().reverse().map(y => {
+    const cs = MS.map(mm => cell(y, mm)), all = cs.every(c => c && ok(c.nw) && ok(c.dv));
+    if (!cs.some(c => c && ok(c.sh))) return '<tr class="sel"><td>' + y + '/' + String(y + 1).slice(2) + '</td><td colspan="8" class="mut">in progress · Eurostat demand so far to ' + fmtMon(dmLast(code)) + '</td></tr>';
+    const tn = all ? cs.reduce((a, c) => a + c.nw, 0) : null, td = all ? cs.reduce((a, c) => a + c.dv, 0) : null;
+    return '<tr' + (y === +d.slice(0, 4) || (y === +d.slice(0, 4) - 1 && d.slice(5) < '04-01') ? ' class="sel"' : '') + '><td>' + y + '/' + String(y + 1).slice(2) + '</td>' +
+      cs.map(c => '<td class="num"' + bar(c && c.sh) + '>' + (c && ok(c.sh) ? fmtN(c.sh, 0) : (c && ok(c.nw) ? '<span class="mut" title="Eurostat has not published this month yet">·</span>' : '')) + '</td>').join('') +
+      '<td class="num"' + bar(all ? tn / td * 100 : null) + '><b>' + (all ? fmtN(tn / td * 100, 0) : '') + '</b></td><td class="num">' + (all ? fmtN(tn, 0) : '') + '</td><td class="num">' + (all ? fmtN(td, 0) : '') + '</td></tr>';
+  }).join('');
+}
+$('#png-dm').addEventListener('click', () => savePNG({
+  name: 'demand-' + ST.code, title: 'Monthly gas demand · ' + cname(ST.code), sub: $('#dm-c-sub').textContent.replace(/^[^·]*· /, ''),
+  blocks: [{el: $('#dm-chart'), keyEl: $('#dm-key')}], foot: 'Source: Eurostat nrg_cb_gasm (inland consumption) · Gasfill · demand to ' + fmtMon(dmLast(ST.code)),
+}));
+$('#dl-dm').addEventListener('click', () => {
+  const code = ST.code; if (!hasDM(code)) return;
+  const out = [['month', 'demand_twh', 'demand_twh_per_day', 'eurostat_flag', 'net_withdrawal_twh', 'storage_share_pct', 'demand_12m_twh']];
+  for (const m of DM.months) { const v = dmon(code, m); if (!ok(v)) continue; const nw = m >= S.start.slice(0, 7) ? monthNet(code, m) : null, r = dm12(code, addMonths(m, 1) + '-01');
+    out.push([m, v, v / monthDays(m), (DM.flags[code] || {})[m] || '', nw, ok(nw) && v > 0 ? nw / v * 100 : null, r && r.end === m ? r.sum : null]); }
+  saveCSV('gas-demand-' + code + '.csv', out);
 });
 
 /* ---------- history: fill, net flow and TTF on one time axis ---------- */
@@ -940,7 +1099,7 @@ function renderHist() {
   $('#h-from').value = from; $('#h-to').value = to; $('#h-from').min = $('#h-to').min = FIRST; $('#h-from').max = $('#h-to').max = LAST;
   $('#hist-sub').textContent = cname(code) + ' · ' + fmtDay(from) + ' to ' + fmtDay(to);
   const days = Array.from({length: n}, (_, i) => addDays(from, i));
-  const fill = days.map(d => val(code, 'full', d)), b5 = days.map(d => base5(code, 'full', d));
+  const hk = ST.hKey, fill = days.map(d => val(code, hk, d)), b5 = days.map(d => base5(code, hk, d));
   const avg = b5.map(b => b ? b.avg : null), lo = b5.map(b => b ? b.min : null), hi = b5.map(b => b ? b.max : null);
   const flow = days.map(d => net(code, d)), tt = days.map(ttf);
   const res = n <= 400 ? 'daily' : n <= 1500 ? 'weekly average' : 'monthly average';
@@ -955,8 +1114,8 @@ function renderHist() {
   }
   const barAt = i => bars.find(b => i >= b.a && i <= b.b);
   const ticks = timeTicks(from, n), tgt = isTarget(code);
-  $('#h-fill-sub').textContent = '% of working gas volume';
-  $('#h-fill-key').innerHTML = '<span><i style="background:var(--s1)"></i>' + esc(cname(code)) + '</span><span><i class="dash"></i>5-year average, same day</span><span><i class="box" style="background:var(--band)"></i>5-year range</span>' + (tgt ? '<span><i class="tgt"></i>90% target</span>' : '');
+  $('#h-fill-sub').textContent = hk === 'full' ? '% of working gas volume' : KEYTXT[hk].replace('gas in storage as ', '');
+  $('#h-fill-key').innerHTML = '<span><i style="background:var(--s1)"></i>' + esc(cname(code)) + '</span><span><i class="dash"></i>5-year average, same day</span><span><i class="box" style="background:var(--band)"></i>5-year range</span>' + (tgt && hk === 'full' ? '<span><i class="tgt"></i>90% target</span>' : '');
   $('#h-flow-sub').textContent = 'GWh/d, ' + res;
   $('#h-flow-key').innerHTML = '<span><i class="box" style="background:var(--inj)"></i>Net injection</span><span><i class="box" style="background:var(--wdr)"></i>Net withdrawal</span>';
   $('#h-ttf-sub').textContent = 'EUR/MWh' + (TTF ? ', data to ' + fmtDay(TTF.end) : ', not loaded');
@@ -966,10 +1125,10 @@ function renderHist() {
   const head = i => '<b>' + fmtDay(days[Math.max(0, Math.min(n - 1, i))]) + '</b>';
   const W = $('#h-fill').clientWidth || 600, small = W < 520;
   charts.push(plot($('#h-fill'), {
-    n, xTicks: ticks, unit: '%', H: small ? 200 : 240, clamp: [0, 100], band: {lo, hi}, refs: tgt ? [{v: 90, label: '90%'}] : [],
+    n, xTicks: ticks, unit: '%', H: small ? 200 : 240, clamp: hk === 'full' ? [0, 100] : [0, 1000], band: {lo, hi}, refs: tgt && hk === 'full' ? [{v: 90, label: '90%'}] : [],
     series: [{name: '5-yr avg', vals: avg, color: 'var(--ink-2)', width: 1.5, dash: '5 4', noDot: true}, {name: cname(code), vals: fill, color: 'var(--s1)', width: 2}],
     aria: 'Fill level history', onMove: move, onLeave: leave,
-    tip: i => head(i) + '<br>' + swatch('var(--s1)') + 'Fill <b>' + fmtN(fill[i], 1) + '%</b>' + (stat(code, days[i]) === 'E' ? ' <span class="mut">est.</span>' : '') + (ok(avg[i]) ? '<br><span class="mut">5-yr avg ' + fmtN(avg[i], 1) + '% · ' + fmtS(fill[i] - avg[i], 1) + ' pp</span>' : ''),
+    tip: i => head(i) + '<br>' + swatch('var(--s1)') + (hk === 'full' ? 'Fill' : "Share of a year's demand") + ' <b>' + fmtN(fill[i], 1) + '%</b>' + (stat(code, days[i]) === 'E' ? ' <span class="mut">est.</span>' : '') + (ok(avg[i]) ? '<br><span class="mut">5-yr avg ' + fmtN(avg[i], 1) + '% · ' + fmtS(fill[i] - avg[i], 1) + ' pp</span>' : ''),
   }));
   charts.push(plot($('#h-flow'), {
     n, xTicks: ticks, unit: 'GWh/d', H: small ? 150 : 180, zero: true, bars,
@@ -1903,12 +2062,12 @@ $('#png-hist').addEventListener('click', () => savePNG({
 function selectCountry(code, scroll) {
   if (!S.series[code]) return;
   ST.code = code; lsSet('code', code);
-  renderChips(); renderTable(); renderWinter(); renderOutlook(); renderSeason(); renderFlows(); renderTerms(); renderHist();
+  renderChips(); renderTable(); renderWinter(); renderOutlook(); renderSeason(); renderDemand(); renderFlows(); renderTerms(); renderHist();
   if (scroll) $('#season').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 function renderAll() {
   if (!S) return;
-  renderKpis(); renderSnapView(); renderInsights(); renderTable(); renderWinter(); renderOutlook(); renderChips(); renderSeason(); renderFlows(); renderTerms(); renderHist();
+  renderKpis(); renderSnapView(); renderInsights(); renderTable(); renderWinter(); renderOutlook(); renderChips(); renderSeason(); renderDemand(); renderFlows(); renderTerms(); renderHist();
 }
 let rz = 0;
 window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(renderAll, 150); });
@@ -1916,7 +2075,8 @@ window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(rend
 async function getJSON(url, cache) { const r = await fetch(url, {cache}); if (!r.ok) throw new Error(url + ' HTTP ' + r.status); return r.json(); }
 async function boot() {
   const bust = '?v=' + Math.floor(Date.now() / 600000);   // new data at most every 10 minutes
-  const [st, tf, mp, ln, tm] = await Promise.allSettled([getJSON('data/storage.json' + bust, 'no-cache'), getJSON('data/ttf.json' + bust, 'no-cache'), getJSON('data/countries-map.json?v=1', 'force-cache'), getJSON('data/lng.json' + bust, 'no-cache'), getJSON('data/lng_terminals.json' + bust, 'no-cache')]);
+  const [st, tf, mp, ln, tm, dm] = await Promise.allSettled([getJSON('data/storage.json' + bust, 'no-cache'), getJSON('data/ttf.json' + bust, 'no-cache'), getJSON('data/countries-map.json?v=1', 'force-cache'), getJSON('data/lng.json' + bust, 'no-cache'), getJSON('data/lng_terminals.json' + bust, 'no-cache'), getJSON('data/demand.json' + bust, 'no-cache')]);
+  if (dm.status === 'fulfilled' && dm.value.series && Object.keys(dm.value.series).length) { DM = dm.value; DM.idx = Object.fromEntries(DM.months.map((m, i) => [m, i])); DM.flags = DM.flags || {}; }
   if (tf.status === 'fulfilled') { TTF = tf.value; $('#ttf-src').textContent = TTF.source + ', ' + TTF.unit + '.'; }
   if (ln.status === 'fulfilled' && ln.value.series && Object.keys(ln.value.series).length) L = ln.value;
   if (tm.status === 'fulfilled' && tm.value.series && Object.keys(tm.value.series).length) TM = tm.value;
@@ -1937,10 +2097,15 @@ async function boot() {
   LAST = END;
   ['#snap', '#ins-panel', '#tbl', '#winter', '#outlook', '#season', '#flows', '#hist'].forEach(id => { $(id).hidden = false; });
   if (TM) $('#terms').hidden = false;
+  if (DM) $('#dem').hidden = false;
+  else document.querySelectorAll('#s-metric [data-v="demE"], #h-metric [data-v="demE"]').forEach(b => b.remove());
+  if (!DM && ST.sKey === 'demE') ST.sKey = 'full';
+  if (!DM && ST.hKey === 'demE') ST.hKey = 'full';
   $('#gen-note').textContent = 'Data file built ' + (S.meta.generated || '?') + ' from ' + S.meta.source + '; history fetched from ' + S.start + ' so every day since ' + FIRST + ' has five earlier years to compare with.';
   segInit('#m-metric', ST.metric, v => { ST.metric = v; lsSet('metric', v); renderSnapView(); });
   segInit('#m-how', ST.how, v => { ST.how = v; lsSet('how', v); renderSnapView(); });
   segInit('#s-metric', ST.sKey, v => { ST.sKey = v; lsSet('s-key', v); renderSeason(); });
+  segInit('#h-metric', ST.hKey, v => { ST.hKey = v; lsSet('h-key', v); renderHist(); });
   segInit('#s-axis', ST.axis, v => { ST.axis = v; lsSet('s-axis', v); ST.years = null; renderSeason(); });
   segInit('#ol-n', String(OL.n), v => { OL.n = +v; lsSet('ol-n', OL.n); renderOutlook(); });
   renderMeta(); initDate(); initHist(); renderChips();
