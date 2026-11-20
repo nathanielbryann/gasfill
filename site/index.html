@@ -175,8 +175,11 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
 .ins p { margin: 0; color: var(--ink-2); font-size: 14px; max-width: 78ch; }
 .ins b.n { font-family: var(--f-mono); color: var(--ink); font-weight: 700; }
 @media (max-width: 520px) { .ins { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
-#ol-table tbody tr { cursor: pointer; }
-#ol-table tbody tr:hover td { background: var(--surface-2); }
+#ol-table tbody tr, #ol-ytable tbody tr { cursor: pointer; }
+#ol-table tbody tr:hover td, #ol-ytable tbody tr:hover td { background: var(--surface-2); }
+#ol-ytable td.nm i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 8px; }
+.zp .ev { font-weight: 500; color: var(--muted); }
+.zp.opt { font-family: var(--f-body); font-weight: 600; }
 .lng-none { color: var(--muted); font-size: 13.5px; margin: 4px 0 0; }
 
 /* Method */
@@ -252,11 +255,15 @@ tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
       <span class="lbl">Country</span><div class="chips" id="ol-chips"></div>
       <div class="seg seg-sm push" id="ol-n" role="group" aria-label="Past years used"><button type="button" data-v="5">Last 5 years</button><button type="button" data-v="10">Since 2016</button></div>
     </div>
+    <div class="ctrl"><span class="lbl" id="ol-y-lbl">Past winters</span><div class="chips" id="ol-years"></div></div>
     <div class="key" id="ol-key"></div>
     <div class="chart-wrap" id="ol-chart"></div>
     <h3 class="ph-h3" id="ol-t-title">All countries</h3>
     <div class="tbl-scroll"><table id="ol-table"><thead></thead><tbody></tbody></table></div>
+    <h3 class="ph-h3" id="ol-y-title">By past winter</h3>
+    <div class="tbl-scroll"><table id="ol-ytable"><thead></thead><tbody></tbody></table></div>
     <div class="foot"><button class="btn sm" type="button" id="png-ol">Save PNG</button><button class="btn sm" type="button" id="dl-ol">Download CSV</button><span id="ol-foot"></span></div>
+    <p class="map-note" style="margin:6px 0 0;max-width:none">Click a winter in the chips or in the table to draw it on the chart; clicking again removes it. Your picks are remembered.</p>
   </section>
 
   <section class="panel" id="season" hidden>
@@ -939,7 +946,7 @@ $('#dl-hist').addEventListener('click', () => {
 });
 
 /* ---------- winter outlook: today's level plus each past year's day-by-day change ---------- */
-const OL = {n: +lsGet('ol-n', 10)};
+const OL = {n: +lsGet('ol-n', 10), sel: lsGet('ol-sel', []), ext: lsGet('ol-ext', true)};
 function horizonFor(d) {
   const y = +d.slice(0, 4), m = +d.slice(5, 7);
   if (m >= 10) return {kind: 'winter', end: (y + 1) + '-03-31'};
@@ -952,6 +959,8 @@ function pastLabel(d, k, kind) {
   const y0 = m >= 10 ? y : y - 1;
   return y0 + '/' + String(y0 + 1).slice(2);
 }
+function pastStart(d, k, kind) { const y = +d.slice(0, 4) - k; return kind === 'refill' || +d.slice(5, 7) >= 10 ? y : y - 1; }
+const endTxt = q => q.empty ? 'empty ' + fmtDM(q.empty) : fmtN(q.end, 0) + '%';
 function outlook(code, d0, nMax) {
   const d = reportedDay(code, d0); if (!d) return null;
   const H = horizonFor(d0), n = daysBetween(d, H.end); if (n < 2) return null;
@@ -969,7 +978,7 @@ function outlook(code, d0, nMax) {
       lvl = Math.max(0, Math.min(100, lvl + dv)); p.push(lvl);
     }
     const e = p.findIndex(v => v <= 0.05);
-    if (miss <= n * 0.05) paths.push({k, label: pastLabel(d, k, H.kind), p, end: p[n], empty: e > 0 ? addDays(d, e) : null});
+    if (miss <= n * 0.05) paths.push({k, y0: pastStart(d, k, H.kind), label: pastLabel(d, k, H.kind), p, end: p[n], empty: e > 0 ? addDays(d, e) : null});
   }
   if (!paths.length) return null;
   const med = [], lo = [], hi = [];
@@ -994,17 +1003,31 @@ function renderOutlook() {
   $('#ol-title').textContent = winter ? 'Winter outlook' : 'Refill outlook';
   $('#ol-intro').textContent = (winter ? 'Where storage could stand on 31 March ' : 'Where storage could stand by 1 December ') +
     'if, from the chosen day, it changes the way it did on the same days in each past year (scaled to each year\'s capacity). A what-if on past patterns, not a forecast. Pick an earlier day above to see how it compared with what happened.';
-  if (!R) { $('#ol-chart').innerHTML = '<p class="map-msg" style="padding:30px 0">Not enough history for ' + esc(cname(code)) + ' from this day.</p>'; $('#ol-sub').textContent = ''; }
+  if (!R) { $('#ol-chart').innerHTML = '<p class="map-msg" style="padding:30px 0">Not enough history for ' + esc(cname(code)) + ' from this day.</p>'; $('#ol-sub').textContent = ''; $('#ol-years').innerHTML = ''; $('#ol-key').innerHTML = ''; }
   else {
     const pre = 90, N = pre + R.n + 1, idx = i => i - pre, date = i => addDays(R.d, idx(i));
     const at = (arr, i) => idx(i) >= 0 ? arr[idx(i)] : null;
     const actual = Array.from({length: N}, (_, i) => { const t = date(i); return t <= LAST ? val(code, 'full', t) : null; });
-    const series = R.paths.map(q => ({name: q.label, vals: Array.from({length: N}, (_, i) => at(q.p, i)), color: 'var(--line-strong)', width: 1, noDot: true}));
-    const low = R.ends[0], high = R.ends[R.ends.length - 1];
-    if (R.paths.length > 1) {
-      series.push({name: 'like ' + high.label, vals: Array.from({length: N}, (_, i) => at(high.p, i)), color: 'var(--inj)', width: 1.5, noDot: true, endLabel: high.label + ' ' + fmtN(high.end, 0) + '%'});
-      series.push({name: 'like ' + low.label, vals: Array.from({length: N}, (_, i) => at(low.p, i)), color: 'var(--wdr)', width: 1.5, noDot: true, endLabel: low.label + ' ' + fmtN(low.end, 0) + '%'});
-    }
+    const sel = new Set(OL.sel), low = R.ends[0], high = R.ends[R.ends.length - 1];
+    const ext = OL.ext && R.paths.length > 1, line = q => Array.from({length: N}, (_, i) => at(q.p, i));
+    const series = R.paths.filter(q => !sel.has(q.y0) && !(ext && (q === low || q === high))).map(q => ({name: q.label, vals: line(q), color: 'var(--line-strong)', width: 1, noDot: true}));
+    if (ext && !sel.has(high.y0)) series.push({name: 'like ' + high.label, vals: line(high), color: 'var(--inj)', width: 1.5, noDot: true, endLabel: high.label + ' ' + endTxt(high)});
+    if (ext && !sel.has(low.y0)) series.push({name: 'like ' + low.label, vals: line(low), color: 'var(--wdr)', width: 1.5, noDot: true, endLabel: low.label + ' ' + endTxt(low)});
+    const picked = R.paths.filter(q => sel.has(q.y0)).sort((a, b) => a.y0 - b.y0);
+    for (const q of picked) series.push({name: 'like ' + q.label, vals: line(q), color: yearColour(q.y0), width: 2.25, endLabel: q.label + ' ' + endTxt(q)});
+    // year picker: one chip per past season, with where it ends
+    const yrs = R.paths.slice().sort((a, b) => a.y0 - b.y0);
+    $('#ol-y-lbl').textContent = winter ? 'Past winters' : 'Past years';
+    $('#ol-years').innerHTML = yrs.map(q => '<button type="button" class="zp" data-y="' + q.y0 + '" aria-pressed="' + sel.has(q.y0) + '" title="Show the path like ' + q.label + '"><i style="background:' + yearColour(q.y0) + '"></i>' + q.label + ' <span class="ev">' + endTxt(q) + '</span></button>').join('') +
+      '<button type="button" class="zp opt" data-y="ext" aria-pressed="' + OL.ext + '">Lowest &amp; highest</button><button type="button" class="zp opt" data-y="all" aria-pressed="false">All</button><button type="button" class="zp opt" data-y="none" aria-pressed="false">None</button>';
+    $('#ol-years').querySelectorAll('.zp').forEach(b => b.addEventListener('click', () => {
+      const v = b.dataset.y;
+      if (v === 'ext') { OL.ext = !OL.ext; lsSet('ol-ext', OL.ext); }
+      else if (v === 'all') OL.sel = yrs.map(q => q.y0);
+      else if (v === 'none') OL.sel = [];
+      else { const y = +v; OL.sel = OL.sel.includes(y) ? OL.sel.filter(x => x !== y) : OL.sel.concat(y); }
+      lsSet('ol-sel', OL.sel); renderOutlook();
+    }));
     series.push({name: 'Median', vals: Array.from({length: N}, (_, i) => at(R.med, i)), color: 'var(--ink-2)', width: 2, dash: '6 4', endLabel: 'median ' + fmtN(R.med[R.n], 0) + '%'});
     series.push({name: 'Actual', vals: actual, color: 'var(--ink)', width: 2.5});
     const dates = Array.from({length: N}, (_, i) => date(i));
@@ -1017,10 +1040,11 @@ function renderOutlook() {
     }
     $('#ol-sub').textContent = cname(code) + ' · from ' + fmtDay(R.d) + ' (' + fmtN(R.f0, 1) + '%) · ' + R.paths.length + ' past ' + (winter ? 'winters' : 'years');
     $('#ol-key').innerHTML = '<span><i style="background:var(--ink);height:4px"></i>Actual</span><span><i class="dash"></i>Median of past years</span><span><i class="box" style="background:var(--band)"></i>Range</span>' +
-      '<span><i style="background:var(--line-strong)"></i>One past ' + (winter ? 'winter' : 'year') + ' each</span><span><i style="background:var(--wdr)"></i>Lowest end</span><span><i style="background:var(--inj)"></i>Highest end</span>' +
+      '<span><i style="background:var(--line-strong)"></i>One past ' + (winter ? 'winter' : 'year') + ' each</span>' + (ext ? '<span><i style="background:var(--wdr)"></i>Lowest end</span><span><i style="background:var(--inj)"></i>Highest end</span>' : '') +
+      picked.map(q => '<span><i style="background:' + yearColour(q.y0) + ';height:3px"></i>Like ' + q.label + '</span>').join('') +
       (refs.length ? '<span><i class="tgt"></i>90% target</span>' : '');
     plot($('#ol-chart'), {
-      n: N, series, band: {lo: dates.map((_, i) => at(R.lo, i)), hi: dates.map((_, i) => at(R.hi, i))}, xTicks: ticks, unit: '%', clamp: [0, 100], padR: 92,
+      n: N, series, band: {lo: dates.map((_, i) => at(R.lo, i)), hi: dates.map((_, i) => at(R.hi, i))}, xTicks: ticks, unit: '%', clamp: [0, 100], padR: R.paths.some(q => q.empty) ? 132 : 92,
       vlines: [{i: pre, label: fmtDM(R.d)}], shades, refs, H: ($('#ol-chart').clientWidth || 600) < 520 ? 250 : 320,
       aria: 'Storage outlook for ' + cname(code),
       tip: i => {
@@ -1028,7 +1052,9 @@ function renderOutlook() {
         if (ok(actual[i])) h += '<br>' + swatch('var(--ink)') + 'Actual <b>' + fmtN(actual[i], 1) + '%</b>';
         if (idx(i) > 0) {
           h += '<br>' + swatch('var(--ink-2)') + 'Median <b>' + fmtN(R.med[idx(i)], 1) + '%</b> <span class="mut">range ' + fmtN(R.lo[idx(i)], 0) + '–' + fmtN(R.hi[idx(i)], 0) + '</span>';
-          h += '<br><span class="mut">' + R.paths.slice().sort((a, b) => b.p[idx(i)] - a.p[idx(i)]).map(q => 'like ' + q.label + ' ' + fmtN(q.p[idx(i)], 0)).join(' · ').replace(/((?:[^·]*·){3}[^·]*)·/g, '$1<br>') + '</span>';
+          for (const q of picked.slice().sort((a, b) => b.p[idx(i)] - a.p[idx(i)])) h += '<br>' + swatch(yearColour(q.y0)) + 'Like ' + q.label + ' <b>' + fmtN(q.p[idx(i)], 1) + '%</b>';
+          const rest = R.paths.filter(q => !sel.has(q.y0)).sort((a, b) => b.p[idx(i)] - a.p[idx(i)]);
+          if (rest.length) h += '<br><span class="mut">' + rest.map(q => q.label + ' ' + fmtN(q.p[idx(i)], 0)).join(' · ').replace(/((?:[^·]*·){3}[^·]*)·/g, '$1<br>') + '</span>';
         }
         return h;
       },
@@ -1050,6 +1076,20 @@ function renderOutlook() {
       '<td class="num">' + (winter ? q.below30 : (c.eu_target ? q.reach : '–')) + ' of ' + q.paths.length + '</td></tr>';
   }).join('');
   $('#ol-table tbody').querySelectorAll('tr').forEach(tr => tr.addEventListener('click', () => selectCountry(tr.dataset.c, false)));
+  // one row per past season, one column per country: where storage would stand at the end
+  const by = new Map();
+  for (const {c, R: q} of rows) for (const pth of q.paths) { if (!by.has(pth.y0)) by.set(pth.y0, {label: pth.label, v: {}}); by.get(pth.y0).v[c.code] = pth; }
+  const ys = [...by.keys()].sort((a, b) => b - a), sel = new Set(OL.sel);
+  $('#ol-y-title').textContent = (winter ? 'By past winter' : 'By past year') + ' · where each country ends on ' + endLab;
+  $('#ol-ytable thead').innerHTML = '<tr><th>' + (winter ? 'Like winter' : 'Like year') + '</th>' + rows.map(({c}) => '<th class="num">' + (c.aggregate ? 'EU total' : esc(c.code)) + '<small>' + endLab + ', %</small></th>').join('') + '</tr>';
+  $('#ol-ytable tbody').innerHTML = ys.map(y => {
+    const r = by.get(y);
+    return '<tr data-y="' + y + '" class="' + (sel.has(y) ? 'sel' : '') + '"><td class="nm"><i style="background:' + yearColour(y) + '"></i>' + r.label + '</td>' +
+      rows.map(({c}) => { const q = r.v[c.code]; return '<td class="num">' + (q ? (q.empty ? 'empty ' + fmtDM(q.empty) : fmtN(q.end, 1)) + (!winter && c.eu_target && q.win >= 90 ? ' <span class="est">≥90</span>' : '') : '–') + '</td>'; }).join('') + '</tr>';
+  }).join('') + '<tr class="agg"><td>Median</td>' + rows.map(({R: q}) => '<td class="num">' + fmtN(q.med[q.n], 1) + '</td>').join('') + '</tr>';
+  $('#ol-ytable tbody').querySelectorAll('tr[data-y]').forEach(tr => tr.addEventListener('click', () => {
+    const y = +tr.dataset.y; OL.sel = OL.sel.includes(y) ? OL.sel.filter(x => x !== y) : OL.sel.concat(y); lsSet('ol-sel', OL.sel); renderOutlook();
+  }));
 }
 $('#dl-ol').addEventListener('click', () => {
   const R = outlook(ST.code, ST.date, OL.n); if (!R) return;
